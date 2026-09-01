@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>홈랩 대시보드</title>
+<style>
+  :root{
+    --bg: #14171c;
+    --panel: #1b1f26;
+    --panel-2: #20242c;
+    --line: #2a2f3a;
+    --text: #e7eaf0;
+    --muted: #8b93a3;
+    --proxmox: #e8823c;
+    --proxmox-dim: #4a3324;
+    --synology: #4f8ff0;
+    --synology-dim: #253552;
+    --ok: #5cc98a;
+    --warn: #e0b84c;
+    --bad: #e5636b;
+    --radius: 8px;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", "Pretendard", "Apple SD Gothic Neo", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--sans); -webkit-font-smoothing:antialiased;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 28px; border-bottom:1px solid var(--line);
+  }
+  header h1{ font-size:18px; font-weight:600; margin:0; letter-spacing:-0.01em; }
+  header .sub{ color:var(--muted); font-size:13px; margin-top:2px; }
+  .controls{ display:flex; align-items:center; gap:14px; }
+  .controls .updated{ font-size:12px; color:var(--muted); font-family:var(--mono); }
+  button.refresh{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:8px 14px; border-radius:var(--radius); cursor:pointer;
+    font-size:13px; display:flex; align-items:center; gap:6px;
+    transition:background .15s;
+  }
+  button.refresh:hover{ background:#262b34; }
+  button.refresh:active{ transform:translateY(1px); }
+  main{
+    display:grid; grid-template-columns:1fr 1fr; gap:20px;
+    padding:24px 28px 48px; max-width:1400px; margin:0 auto;
+    align-items:start;
+  }
+  @media (max-width:900px){ main{ grid-template-columns:1fr; } }
+
+  .zone{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .zone-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 18px; border-bottom:1px solid var(--line);
+  }
+  .zone-head .name{ display:flex; align-items:center; gap:10px; font-weight:600; font-size:15px; }
+  .dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .dot.ok{ background:var(--ok); box-shadow:0 0 8px var(--ok); }
+  .dot.bad{ background:var(--bad); box-shadow:0 0 8px var(--bad); }
+  .dot.off{ background:#4a4f5a; }
+  a.open-link{
+    font-size:12px; color:var(--muted); text-decoration:none; border:1px solid var(--line);
+    padding:5px 10px; border-radius:6px; transition:color .15s, border-color .15s;
+  }
+  a.open-link:hover{ color:var(--text); border-color:#3a4150; }
+
+  .metrics{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); }
+  .metric{ background:var(--panel); padding:14px 16px; }
+  .metric .label{ font-size:11px; color:var(--muted); margin-bottom:6px; }
+  .metric .value{ font-family:var(--mono); font-size:20px; font-weight:600; }
+  .metric .value.warn{ color:var(--warn); }
+  .metric .value.bad{ color:var(--bad); }
+
+  .subhead{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:14px 18px 6px; font-size:12.5px; font-weight:600; color:var(--muted);
+  }
+  .subhead .hint{ font-size:11px; font-weight:400; color:#5c6373; }
+
+  .list{ padding:4px 8px 8px; }
+  .row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 10px; border-radius:6px; cursor:pointer; user-select:none;
+    transition:background .12s;
+  }
+  .row:hover{ background:var(--panel-2); }
+  .row-left{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .row-left .name{ font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:200px; }
+  .badge{ font-size:10.5px; padding:2px 6px; border-radius:4px; font-family:var(--mono); flex-shrink:0; }
+  .badge.qemu{ background:var(--proxmox-dim); color:var(--proxmox); }
+  .badge.lxc{ background:#2c3a2c; color:#8bc98a; }
+  .row-right{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px; color:var(--muted); flex-shrink:0; }
+
+  .pill{
+    font-size:11px; padding:3px 9px; border-radius:20px; font-weight:600;
+    display:inline-flex; align-items:center; gap:5px; white-space:nowrap;
+  }
+  .pill.on{ background:#1d3a2a; color:var(--ok); }
+  .pill.off{ background:#33262a; color:#a8a2ab; }
+  .pill.paused{ background:#3a331d; color:var(--warn); }
+  .pill::before{ content:''; width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  .detail{
+    display:none; padding:8px 14px 14px 30px; font-size:12.5px; color:var(--muted); font-family:var(--mono);
+    line-height:1.7;
+  }
+  .row.expanded .detail{ display:block; }
+  .row.expanded{ background:var(--panel-2); }
+
+  .empty, .error-box{ padding:14px 18px; color:var(--muted); font-size:12.5px; line-height:1.6; }
+  .error-box{ color:var(--bad); }
+  code{ background:var(--panel-2); padding:1px 5px; border-radius:4px; font-family:var(--mono); font-size:12px; }
+
+  .storage-list{ padding:10px 18px 16px; display:flex; flex-direction:column; gap:12px; }
+  .vol{ font-size:13px; }
+  .vol-top{ display:flex; justify-content:space-between; margin-bottom:6px; color:var(--muted); font-family:var(--mono); font-size:12px; }
+  .bar{ height:6px; border-radius:3px; background:var(--panel-2); overflow:hidden; }
+  .bar-fill{ height:100%; border-radius:3px; }
+
+  /* 접속자/차단 */
+  .conn-row{ padding:8px 10px; display:flex; align-items:center; justify-content:space-between; gap:10px; border-radius:6px; }
+  .conn-row:hover{ background:var(--panel-2); }
+  .conn-left{ display:flex; align-items:center; gap:10px; font-size:12.5px; min-width:0; }
+  .conn-left .ip{ font-family:var(--mono); }
+  .conn-left .who{ color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:150px; }
+  .action-badge{ font-family:var(--mono); font-size:10.5px; padding:1px 6px; border-radius:4px; }
+  .action-badge.DROP{ background:#3a1f22; color:var(--bad); }
+  .action-badge.ACCEPT{ background:#1d3a2a; color:var(--ok); }
+  .btn-block{
+    background:none; border:1px solid #4a2d33; color:#e08b91; font-size:11px;
+    padding:4px 10px; border-radius:6px; cursor:pointer; flex-shrink:0; transition:background .12s;
+  }
+  .btn-block:hover{ background:#2a1c1f; }
+  .btn-unblock{
+    background:none; border:1px solid var(--line); color:var(--muted); font-size:11px;
+    padding:4px 10px; border-radius:6px; cursor:pointer; flex-shrink:0; transition:background .12s;
+  }
+  .btn-unblock:hover{ background:var(--panel-2); color:var(--text); }
+
+  .block-input-row{ display:flex; gap:8px; padding:0 18px 10px; }
+  .block-input-row input{
+    flex:1; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:8px 10px; border-radius:6px; font-size:12.5px; font-family:var(--mono);
+    outline:none;
+  }
+  .block-input-row input:focus{ border-color:#3a4150; }
+  .block-input-row button{
+    background:#2a1c1f; border:1px solid #4a2d33; color:#e08b91; padding:8px 14px;
+    border-radius:6px; font-size:12.5px; cursor:pointer; flex-shrink:0; transition:background .12s;
+  }
+  .block-input-row button:hover{ background:#3a262b; }
+  .blocked-list{ padding:0 8px 12px; }
+  .blocked-item{
+    display:flex; align-items:center; justify-content:space-between; padding:7px 10px;
+    font-family:var(--mono); font-size:12px; border-radius:6px;
+  }
+  .blocked-item:hover{ background:var(--panel-2); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>홈랩 대시보드</h1>
+    <div class="sub">Proxmox VE · Synology DSM</div>
+  </div>
+  <div class="controls">
+    <span class="updated" id="updated">불러오는 중…</span>
+    <button class="refresh" id="refreshBtn">↻ 새로고침</button>
+  </div>
+</header>
+
+<main>
+  <section class="zone" id="proxmoxZone">
+    <div class="zone-head">
+      <div class="name"><span class="dot off" id="pveDot"></span>Proxmox</div>
+      <a class="open-link" id="pveLink" href="#" target="_blank" rel="noopener">웹 UI 열기 ↗</a>
+    </div>
+    <div id="pveNotice"></div>
+    <div id="pveContent" style="display:none">
+      <div class="metrics" id="pveMetrics"></div>
+
+      <div class="subhead">가상머신 / 컨테이너</div>
+      <div class="list" id="pveGuests"></div>
+
+      <div class="subhead">최근 접속 시도 <span class="hint" id="pveConnHint"></span></div>
+      <div class="list" id="pveConnections"></div>
+
+      <div class="subhead">차단 목록</div>
+      <div class="block-input-row">
+        <input type="text" id="pveBlockInput" placeholder="IP 또는 CIDR (예: 1.2.3.4)">
+        <button id="pveBlockBtn">차단</button>
+      </div>
+      <div class="blocked-list" id="pveBlockedList"></div>
+    </div>
+  </section>
+
+  <section class="zone" id="synologyZone">
+    <div class="zone-head">
+      <div class="name"><span class="dot off" id="synDot"></span>Synology</div>
+      <a class="open-link" id="synLink" href="#" target="_blank" rel="noopener">웹 UI 열기 ↗</a>
+    </div>
+    <div id="synNotice"></div>
+    <div id="synContent" style="display:none">
+      <div class="metrics" id="synMetrics"></div>
+
+      <div class="subhead">스토리지</div>
+      <div class="storage-list" id="synStorage"></div>
+
+      <div class="subhead">Docker 컨테이너 <span class="hint" id="synDockerHint"></span></div>
+      <div class="list" id="synDocker"></div>
+
+      <div class="subhead">로그인 세션</div>
+      <div class="list" id="synSessions"></div>
+
+      <div class="subhead">차단 목록</div>
+      <div class="block-input-row">
+        <input type="text" id="synBlockInput" placeholder="IP 입력 (예: 1.2.3.4)">
+        <button id="synBlockBtn">차단</button>
+      </div>
+      <div class="blocked-list" id="synBlockedList"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const fmtBytes = (b) => {
+  if (!b && b !== 0) return '-';
+  const units = ['B','KB','MB','GB','TB'];
+  let i = 0, v = Number(b);
+  while (v >= 1024 && i < units.length - 1) { v /= 1024; i++; }
+  return v.toFixed(1) + units[i];
+};
+const fmtPct = (v) => (v * 100).toFixed(0) + '%';
+const fmtUptime = (s) => {
+  if (!s) return '-';
+  const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
+  return d > 0 ? `${d}일 ${h}시간` : `${h}시간`;
+};
+const fmtTime = (t) => {
+  if (!t) return '-';
+  const ms = t > 1e12 ? t : t * 1000;
+  return new Date(ms).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+};
+const levelClass = (pct) => pct > 0.85 ? 'bad' : pct > 0.65 ? 'warn' : '';
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  return r.json();
+}
+
+/* ---------------- Proxmox ---------------- */
+
+function pillFor(status) {
+  if (status === 'running') return `<span class="pill on">실행 중</span>`;
+  if (status === 'paused') return `<span class="pill paused">일시정지</span>`;
+  return `<span class="pill off">중지됨</span>`;
+}
+
+function renderProxmoxGuests(nodes) {
+  let html = '';
+  nodes.forEach((n) => {
+    if (n.guests.length === 0) return;
+    n.guests.forEach((g) => {
+      const guestMemPct = g.maxmem ? g.mem / g.maxmem : 0;
+      html += `
+        <div class="row" data-toggle>
+          <div class="row-left">
+            <span class="badge ${g.type}">${g.type === 'qemu' ? 'VM' : 'LXC'}</span>
+            <span class="name">${esc(g.name || ('#' + g.id))}</span>
+          </div>
+          <div class="row-right">${pillFor(g.status)}</div>
+          <div class="detail">
+            ID <code>${g.id}</code> · 노드 ${esc(n.node)} · CPU ${fmtPct(g.cpu || 0)} · 메모리 ${fmtBytes(g.mem)} / ${fmtBytes(g.maxmem)} (${fmtPct(guestMemPct)})
+          </div>
+        </div>`;
+    });
+  });
+  document.getElementById('pveGuests').innerHTML = html || `<div class="empty">VM / 컨테이너가 없습니다.</div>`;
+}
+
+function renderProxmoxMetrics(nodes) {
+  let html = '';
+  nodes.forEach((n) => {
+    const cpuPct = n.cpu, memPct = n.mem / n.maxmem, diskPct = n.disk / n.maxdisk;
+    html += `
+      <div class="metric"><div class="label">${esc(n.node)} · CPU</div><div class="value ${levelClass(cpuPct)}">${fmtPct(cpuPct)}</div></div>
+      <div class="metric"><div class="label">메모리</div><div class="value ${levelClass(memPct)}">${fmtPct(memPct)}</div></div>
+      <div class="metric"><div class="label">디스크</div><div class="value ${levelClass(diskPct)}">${fmtPct(diskPct)}</div></div>
+      <div class="metric"><div class="label">가동 시간</div><div class="value">${fmtUptime(n.uptime)}</div></div>`;
+  });
+  document.getElementById('pveMetrics').innerHTML = html;
+}
+
+async function loadProxmoxConnections() {
+  const data = await api('/api/proxmox/connections');
+  const hint = document.getElementById('pveConnHint');
+  const box = document.getElementById('pveConnections');
+  if (!data.ok) { box.innerHTML = `<div class="empty">불러올 수 없습니다.</div>`; return; }
+  if (data.items.length === 0) {
+    hint.textContent = '(방화벽 로깅이 꺼져 있으면 비어 있습니다)';
+    box.innerHTML = `<div class="empty">기록된 접속 시도가 없습니다.</div>`;
+    return;
+  }
+  hint.textContent = '';
+  box.innerHTML = data.items.map(it => `
+    <div class="conn-row">
+      <div class="conn-left">
+        <span class="action-badge ${it.action}">${it.action}</span>
+        <span class="ip">${esc(it.ip)}</span>
+        ${it.port ? `<span class="who">:${esc(it.port)}</span>` : ''}
+      </div>
+      <button class="btn-block" data-block-ip="${esc(it.ip)}" data-target="pve">차단</button>
+    </div>`).join('');
+}
+
+async function loadProxmoxBlocklist() {
+  const data = await api('/api/proxmox/blocklist');
+  const box = document.getElementById('pveBlockedList');
+  if (!data.ok || data.items.length === 0) {
+    box.innerHTML = `<div class="empty" style="padding:6px 10px;">차단된 IP가 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = data.items.map(it => `
+    <div class="blocked-item">
+      <span>${esc(it.cidr)}</span>
+      <button class="btn-unblock" data-unblock-ip="${esc(it.cidr)}" data-target="pve">해제</button>
+    </div>`).join('');
+}
+
+async function renderProxmox(data) {
+  const dot = document.getElementById('pveDot');
+  const link = document.getElementById('pveLink');
+  const notice = document.getElementById('pveNotice');
+  const content = document.getElementById('pveContent');
+
+  link.href = data.host || '#';
+  if (!data.configured) {
+    dot.className = 'dot off'; content.style.display = 'none';
+    notice.innerHTML = `<div class="empty">아직 설정되지 않았습니다. <code>.env</code>에 <code>PROXMOX_HOST</code>, <code>PROXMOX_TOKEN_ID</code>, <code>PROXMOX_TOKEN_SECRET</code>을 입력하세요.</div>`;
+    return;
+  }
+  if (!data.ok) {
+    dot.className = 'dot bad'; content.style.display = 'none';
+    notice.innerHTML = `<div class="error-box">연결 실패: ${esc(data.error)}</div>`;
+    return;
+  }
+  dot.className = 'dot ok'; notice.innerHTML = ''; content.style.display = 'block';
+  renderProxmoxMetrics(data.nodes);
+  renderProxmoxGuests(data.nodes);
+  await Promise.all([loadProxmoxConnections(), loadProxmoxBlocklist()]);
+}
+
+/* ---------------- Synology ---------------- */
+
+function dockerPillFor(status) {
+  const s = (status || '').toLowerCase();
+  if (s.includes('run')) return `<span class="pill on">실행 중</span>`;
+  if (s.includes('pause')) return `<span class="pill paused">일시정지</span>`;
+  return `<span class="pill off">중지됨</span>`;
+}
+
+async function loadSynDocker() {
+  const data = await api('/api/synology/docker');
+  const box = document.getElementById('synDocker');
+  const hint = document.getElementById('synDockerHint');
+  if (!data.ok) {
+    hint.textContent = '';
+    box.innerHTML = `<div class="empty">불러올 수 없습니다: ${esc(data.error || '')}</div>`;
+    return;
+  }
+  hint.textContent = '';
+  if (data.items.length === 0) {
+    box.innerHTML = `<div class="empty">컨테이너가 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = data.items.map(c => `
+    <div class="row" data-toggle>
+      <div class="row-left">
+        <span class="name">${esc(c.name || c.id)}</span>
+      </div>
+      <div class="row-right">${dockerPillFor(c.status)}</div>
+      <div class="detail">이미지 <code>${esc(c.image || '-')}</code></div>
+    </div>`).join('');
+}
+
+async function loadSynSessions() {
+  const data = await api('/api/synology/sessions');
+  const box = document.getElementById('synSessions');
+  if (!data.ok) {
+    box.innerHTML = `<div class="empty">불러올 수 없습니다: ${esc(data.error || '')}</div>`;
+    return;
+  }
+  if (data.items.length === 0) {
+    box.innerHTML = `<div class="empty">현재 로그인된 세션이 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = data.items.map(it => `
+    <div class="conn-row">
+      <div class="conn-left">
+        <span class="who">${esc(it.name || it.account || '-')}</span>
+        <span class="ip">${esc(it.ip || '-')}</span>
+      </div>
+      <button class="btn-block" data-block-ip="${esc(it.ip)}" data-target="syn">차단</button>
+    </div>`).join('');
+}
+
+async function loadSynBlocklist() {
+  const data = await api('/api/synology/blocklist');
+  const box = document.getElementById('synBlockedList');
+  if (!data.ok || data.items.length === 0) {
+    box.innerHTML = `<div class="empty" style="padding:6px 10px;">차단된 IP가 없습니다.</div>`;
+    return;
+  }
+  box.innerHTML = data.items.map(it => `
+    <div class="blocked-item">
+      <span>${esc(it.ip || it.cidr)}</span>
+      <button class="btn-unblock" data-unblock-ip="${esc(it.ip || it.cidr)}" data-target="syn">해제</button>
+    </div>`).join('');
+}
+
+async function renderSynology(data) {
+  const dot = document.getElementById('synDot');
+  const link = document.getElementById('synLink');
+  const notice = document.getElementById('synNotice');
+  const content = document.getElementById('synContent');
+
+  link.href = data.host || '#';
+  if (!data.configured) {
+    dot.className = 'dot off'; content.style.display = 'none';
+    notice.innerHTML = `<div class="empty">아직 설정되지 않았습니다. <code>.env</code>에 <code>SYNOLOGY_HOST</code>, <code>SYNOLOGY_USER</code>, <code>SYNOLOGY_PASSWORD</code>를 입력하세요.</div>`;
+    return;
+  }
+  if (!data.ok) {
+    dot.className = 'dot bad'; content.style.display = 'none';
+    notice.innerHTML = `<div class="error-box">연결 실패: ${esc(data.error)}</div>`;
+    return;
+  }
+  dot.className = 'dot ok'; notice.innerHTML = ''; content.style.display = 'block';
+
+  const u = data.utilization || {};
+  const cpuPct = u.cpu ? (u.cpu.user_load + u.cpu.system_load) / 100 : 0;
+  const memPct = u.memory ? u.memory.real_usage / 100 : 0;
+  const info = data.info || {};
+  document.getElementById('synMetrics').innerHTML = `
+    <div class="metric"><div class="label">CPU</div><div class="value ${levelClass(cpuPct)}">${fmtPct(cpuPct)}</div></div>
+    <div class="metric"><div class="label">메모리</div><div class="value ${levelClass(memPct)}">${fmtPct(memPct)}</div></div>
+    <div class="metric"><div class="label">모델</div><div class="value" style="font-size:14px">${esc(info.model || '-')}</div></div>
+    <div class="metric"><div class="label">가동 시간</div><div class="value" style="font-size:14px">${info.up_time ? fmtUptime(info.up_time) : '-'}</div></div>`;
+
+  const volumes = (data.storage && data.storage.volumes) || [];
+  const storageBox = document.getElementById('synStorage');
+  if (volumes.length === 0) {
+    storageBox.innerHTML = `<div class="empty">볼륨 정보를 가져오지 못했습니다.</div>`;
+  } else {
+    storageBox.innerHTML = volumes.map((v) => {
+      const total = parseInt(v.size?.total || 0, 10);
+      const used = parseInt(v.size?.used || 0, 10);
+      const pct = total ? used / total : 0;
+      return `
+        <div class="vol">
+          <div class="vol-top"><span>${esc(v.display_name || v.id)}</span><span>${fmtBytes(used)} / ${fmtBytes(total)}</span></div>
+          <div class="bar"><div class="bar-fill" style="width:${(pct*100).toFixed(0)}%; background:${pct>0.85?'var(--bad)':pct>0.65?'var(--warn)':'var(--synology)'}"></div></div>
+        </div>`;
+    }).join('');
+  }
+
+  await Promise.all([loadSynDocker(), loadSynSessions(), loadSynBlocklist()]);
+}
+
+/* ---------------- 새로고침 / 이벤트 ---------------- */
+
+async function refresh() {
+  document.getElementById('updated').textContent = '불러오는 중…';
+  try {
+    const [pve, syn] = await Promise.all([
+      api('/api/proxmox'),
+      api('/api/synology'),
+    ]);
+    await Promise.all([renderProxmox(pve), renderSynology(syn)]);
+  } catch (e) {
+    document.getElementById('updated').textContent = '불러오기 실패';
+    return;
+  }
+  document.getElementById('updated').textContent =
+    '마지막 업데이트 ' + new Date().toLocaleTimeString('ko-KR');
+}
+
+// 클릭 한 번으로 펼치기/접기 + 차단/해제 버튼 처리
+document.addEventListener('click', async (e) => {
+  const blockBtn = e.target.closest('[data-block-ip]');
+  if (blockBtn) {
+    const ip = blockBtn.dataset.blockIp;
+    const target = blockBtn.dataset.target;
+    if (!ip || ip === '-') return;
+    blockBtn.textContent = '차단 중…'; blockBtn.disabled = true;
+    const url = target === 'pve' ? '/api/proxmox/block' : '/api/synology/block';
+    await api(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip }) });
+    target === 'pve' ? (await loadProxmoxBlocklist(), await loadProxmoxConnections()) : (await loadSynBlocklist(), await loadSynSessions());
+    return;
+  }
+  const unblockBtn = e.target.closest('[data-unblock-ip]');
+  if (unblockBtn) {
+    const ip = unblockBtn.dataset.unblockIp;
+    const target = unblockBtn.dataset.target;
+    unblockBtn.textContent = '해제 중…'; unblockBtn.disabled = true;
+    const url = target === 'pve' ? `/api/proxmox/block/${encodeURIComponent(ip)}` : `/api/synology/block/${encodeURIComponent(ip)}`;
+    await api(url, { method: 'DELETE' });
+    target === 'pve' ? await loadProxmoxBlocklist() : await loadSynBlocklist();
+    return;
+  }
+  const row = e.target.closest('.row[data-toggle]');
+  if (row) row.classList.toggle('expanded');
+});
+
+document.getElementById('pveBlockBtn').addEventListener('click', async () => {
+  const input = document.getElementById('pveBlockInput');
+  const ip = input.value.trim();
+  if (!ip) return;
+  await api('/api/proxmox/block', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip }) });
+  input.value = '';
+  await loadProxmoxBlocklist();
+});
+
+document.getElementById('synBlockBtn').addEventListener('click', async () => {
+  const input = document.getElementById('synBlockInput');
+  const ip = input.value.trim();
+  if (!ip) return;
+  await api('/api/synology/block', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip }) });
+  input.value = '';
+  await loadSynBlocklist();
+});
+
+document.getElementById('refreshBtn').addEventListener('click', refresh);
+
+refresh();
+setInterval(refresh, 15000);
+</script>
+</body>
+</html>

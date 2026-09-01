@@ -1,0 +1,14 @@
+{
+  "name": "homelab-dashboard",
+  "version": "1.0.0",
+  "description": "Proxmox + Synology 통합 모니터링 대시보드",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0"
+  }
+}

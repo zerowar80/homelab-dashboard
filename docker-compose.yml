@@ -1,0 +1,9 @@
+services:
+  homelab-dashboard:
+    build: .
+    container_name: homelab-dashboard
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    restart: unless-stopped
