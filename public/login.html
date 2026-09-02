@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>로그인 - 홈랩 대시보드</title>
+<style>
+  :root{
+    --bg: #14171c; --panel: #1b1f26; --panel-2: #20242c; --line: #2a2f3a;
+    --text: #e7eaf0; --muted: #8b93a3; --synology: #4f8ff0; --bad: #e5636b;
+    --sans: -apple-system, "Segoe UI", "Pretendard", "Apple SD Gothic Neo", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:var(--sans);
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .card{
+    width:100%; max-width:340px; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:28px 26px;
+  }
+  h1{ font-size:17px; margin:0 0 4px; }
+  .sub{ color:var(--muted); font-size:12.5px; margin:0 0 22px; }
+  label{ display:block; font-size:12px; color:var(--muted); margin:14px 0 5px; }
+  input{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:10px 12px; border-radius:8px; font-size:14px; outline:none;
+  }
+  input:focus{ border-color:#3a4150; }
+  button{
+    width:100%; margin-top:20px; background:var(--synology); border:none; color:#0d1420;
+    font-weight:600; padding:11px; border-radius:8px; font-size:14px; cursor:pointer;
+  }
+  button:hover{ opacity:.9; }
+  .msg{ font-size:12.5px; color:var(--bad); min-height:16px; margin-top:10px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>홈랩 대시보드</h1>
+    <p class="sub">로그인해서 계속하세요</p>
+    <form id="loginForm">
+      <label>아이디</label>
+      <input type="text" id="username" autocomplete="username" autofocus>
+      <label>비밀번호</label>
+      <input type="password" id="password" autocomplete="current-password">
+      <div class="msg" id="msg"></div>
+      <button type="submit">로그인</button>
+    </form>
+  </div>
+<script>
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('msg');
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+  const r = await fetch('/api/login', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ username, password }),
+  }).then(r => r.json());
+  if (r.ok) {
+    location.href = '/';
+  } else {
+    msg.textContent = r.error || '로그인 실패';
+  }
+});
+</script>
+</body>
+</html>

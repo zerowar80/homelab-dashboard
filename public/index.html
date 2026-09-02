@@ -30,60 +30,68 @@
   }
   header{
     display:flex; align-items:center; justify-content:space-between;
-    padding:20px 28px; border-bottom:1px solid var(--line);
+    padding:14px 20px; border-bottom:1px solid var(--line); flex-wrap:wrap; gap:8px;
   }
-  header h1{ font-size:18px; font-weight:600; margin:0; letter-spacing:-0.01em; }
-  header .sub{ color:var(--muted); font-size:13px; margin-top:2px; }
-  .controls{ display:flex; align-items:center; gap:14px; }
-  .controls .updated{ font-size:12px; color:var(--muted); font-family:var(--mono); }
+  header h1{ font-size:16px; font-weight:600; margin:0; letter-spacing:-0.01em; }
+  header .sub{ color:var(--muted); font-size:12px; margin-top:1px; }
+  .controls{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .controls .updated{ font-size:11.5px; color:var(--muted); font-family:var(--mono); }
+  .username-badge{ font-size:11.5px; color:var(--muted); }
   button.refresh{
     background:var(--panel-2); border:1px solid var(--line); color:var(--text);
-    padding:8px 14px; border-radius:var(--radius); cursor:pointer;
-    font-size:13px; display:flex; align-items:center; gap:6px;
+    padding:7px 12px; border-radius:var(--radius); cursor:pointer;
+    font-size:12.5px; display:flex; align-items:center; gap:6px;
     transition:background .15s;
   }
   button.refresh:hover{ background:#262b34; }
   button.refresh:active{ transform:translateY(1px); }
   .server-grid{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:20px;
-    padding:24px 28px 40px; max-width:1400px; margin:0 auto;
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:14px;
+    padding:16px; max-width:1400px; margin:0 auto;
     align-items:start;
   }
-  @media (max-width:900px){ .server-grid{ grid-template-columns:1fr; } }
+  .zone{ max-width:640px; }
+  @media (max-width:900px){ .server-grid{ grid-template-columns:1fr; } .zone{ max-width:none; } }
 
   .zone{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
   .zone-head{
-    display:flex; align-items:center; justify-content:space-between;
-    padding:16px 18px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;
+    padding:12px 14px; border-bottom:1px solid var(--line);
   }
-  .zone-head .name{ display:flex; align-items:center; gap:10px; font-weight:600; font-size:15px; }
+  .zone-head .name{ display:flex; align-items:center; gap:8px; font-weight:600; font-size:14px; }
   .dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
   .dot.ok{ background:var(--ok); box-shadow:0 0 8px var(--ok); }
   .dot.bad{ background:var(--bad); box-shadow:0 0 8px var(--bad); }
   .dot.off{ background:#4a4f5a; }
   a.open-link{
-    font-size:12px; color:var(--muted); text-decoration:none; border:1px solid var(--line);
-    padding:5px 10px; border-radius:6px; transition:color .15s, border-color .15s;
+    font-size:11.5px; color:var(--muted); text-decoration:none; border:1px solid var(--line);
+    padding:4px 9px; border-radius:6px; transition:color .15s, border-color .15s;
   }
   a.open-link:hover{ color:var(--text); border-color:#3a4150; }
 
   .metrics{ display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--line); }
-  .metric{ background:var(--panel); padding:14px 16px; }
-  .metric .label{ font-size:11px; color:var(--muted); margin-bottom:6px; }
-  .metric .value{ font-family:var(--mono); font-size:20px; font-weight:600; }
+  .metric{ background:var(--panel); padding:10px 12px; }
+  .metric .label{ font-size:10.5px; color:var(--muted); margin-bottom:4px; }
+  .metric .value{ font-family:var(--mono); font-size:17px; font-weight:600; }
   .metric .value.warn{ color:var(--warn); }
   .metric .value.bad{ color:var(--bad); }
+  @media (max-width:480px){ .metrics{ grid-template-columns:repeat(2,1fr); } }
+  @media (max-width:420px){
+    .controls .updated{ display:none; }
+    header h1{ font-size:15px; }
+    button.refresh{ padding:6px 10px; font-size:12px; }
+  }
 
   .subhead{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
-    padding:14px 18px 6px; font-size:12.5px; font-weight:600; color:var(--muted);
+    padding:10px 14px 4px; font-size:12px; font-weight:600; color:var(--muted);
   }
   .subhead .hint{ font-size:11px; font-weight:400; color:#5c6373; }
 
   .list{ padding:4px 8px 8px; }
   .row{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
-    padding:10px 10px; border-radius:6px; cursor:pointer; user-select:none;
+    padding:8px 10px; border-radius:6px; cursor:pointer; user-select:none;
     transition:background .12s;
   }
   .row:hover{ background:var(--panel-2); }
@@ -207,15 +215,15 @@
   .notice-setup-btn:hover{ background:#262b34; }
 
   /* 서비스 바로가기 */
-  .shortcuts{ max-width:1400px; margin:0 auto; padding:0 28px 48px; }
-  .shortcuts-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .shortcuts{ max-width:1400px; margin:0 auto; padding:0 16px 32px; }
+  .shortcuts-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
   .shortcuts-head h2{ font-size:15px; margin:0; font-weight:600; }
   .add-group-btn{
     background:var(--panel-2); border:1px solid var(--line); color:var(--text);
     padding:7px 14px; border-radius:6px; font-size:12.5px; cursor:pointer;
   }
   .add-group-btn:hover{ background:#262b34; }
-  .group-card{ margin-bottom:22px; }
+  .group-card{ margin-bottom:16px; }
   .group-head{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
   .group-head h3{ font-size:14px; margin:0; font-weight:600; color:var(--text); }
   .group-head .group-actions{ display:flex; gap:6px; margin-left:auto; }
@@ -280,6 +288,22 @@
   }
   .server-list-item:hover{ background:var(--panel-2); }
   .server-list-item .host{ color:var(--muted); font-family:var(--mono); font-size:11.5px; }
+
+  /* 설정 모달 탭 */
+  .settings-tabs{ display:flex; gap:4px; padding:10px 16px 0; border-bottom:1px solid var(--line); }
+  .settings-tab{
+    background:none; border:none; color:var(--muted); font-size:12.5px; padding:9px 12px;
+    cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px;
+  }
+  .settings-tab.active{ color:var(--text); border-bottom-color:var(--synology); }
+  .settings-tab:hover{ color:var(--text); }
+  .access-log-item{
+    display:flex; align-items:center; justify-content:space-between; padding:7px 10px;
+    font-size:12px; font-family:var(--mono); border-radius:6px;
+  }
+  .access-log-item:hover{ background:var(--panel-2); }
+  .access-log-item .fail{ color:var(--bad); }
+  .access-log-item .ok{ color:var(--ok); }
 </style>
 </head>
 <body>
@@ -291,6 +315,8 @@
   </div>
   <div class="controls">
     <span class="updated" id="updated">불러오는 중…</span>
+    <span class="username-badge" id="usernameBadge" style="display:none"></span>
+    <button class="refresh" id="logoutBtn" style="display:none">로그아웃</button>
     <button class="refresh" id="settingsBtn">⚙ 설정</button>
     <button class="refresh" id="refreshBtn">↻ 새로고침</button>
   </div>
@@ -381,24 +407,76 @@
   </div>
 </div>
 
-<!-- 서버 관리 모달 -->
+<!-- 설정 모달 -->
 <div class="modal-overlay" id="settingsOverlay">
   <div class="modal">
     <div class="modal-head">
-      <h2>서버 관리</h2>
+      <h2>설정</h2>
       <button class="modal-close" data-close="settingsOverlay">✕</button>
     </div>
+    <div class="settings-tabs">
+      <button class="settings-tab active" data-tab="servers">서버</button>
+      <button class="settings-tab" data-tab="general">일반</button>
+      <button class="settings-tab" data-tab="account">계정</button>
+    </div>
     <div class="modal-body">
-      <div class="modal-section">
-        <h3><span class="modal-dot" style="background:var(--proxmox)"></span>Proxmox</h3>
-        <div id="pveServerList"></div>
-        <button class="add-tile-card" id="addPveServerBtn" style="margin-top:8px; min-height:40px;">+ Proxmox 서버 추가</button>
+      <div class="settings-pane" data-pane="servers">
+        <div class="modal-section">
+          <h3><span class="modal-dot" style="background:var(--proxmox)"></span>Proxmox</h3>
+          <div id="pveServerList"></div>
+          <button class="add-tile-card" id="addPveServerBtn" style="margin-top:8px; min-height:40px;">+ Proxmox 서버 추가</button>
+        </div>
+        <div class="modal-section">
+          <h3><span class="modal-dot" style="background:var(--synology)"></span>Synology</h3>
+          <div id="synServerList"></div>
+          <button class="add-tile-card" id="addSynServerBtn" style="margin-top:8px; min-height:40px;">+ Synology 서버 추가</button>
+        </div>
       </div>
-      <div class="modal-section">
-        <h3><span class="modal-dot" style="background:var(--synology)"></span>Synology</h3>
-        <div id="synServerList"></div>
-        <button class="add-tile-card" id="addSynServerBtn" style="margin-top:8px; min-height:40px;">+ Synology 서버 추가</button>
+
+      <div class="settings-pane" data-pane="general" style="display:none">
+        <div class="modal-section">
+          <h3>새로고침 주기</h3>
+          <label>몇 초마다 자동으로 새로고침할지 <span class="hint">(5~600초)</span></label>
+          <input type="number" id="refreshIntervalInput" min="5" max="600" step="5">
+          <div class="modal-msg" id="generalMsg"></div>
+        </div>
       </div>
+
+      <div class="settings-pane" data-pane="account" style="display:none">
+        <div class="modal-section">
+          <h3>계정</h3>
+          <div class="empty" style="padding:0 0 10px;" id="authHint"></div>
+          <div id="userList"></div>
+          <button class="add-tile-card" id="addUserBtn" style="margin-top:8px; min-height:40px;">+ 계정 추가</button>
+        </div>
+        <div class="modal-section">
+          <h3>최근 로그인 시도</h3>
+          <div id="accessLogList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 계정 추가/비밀번호 변경 모달 -->
+<div class="modal-overlay" id="userFormOverlay">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-head">
+      <h2 id="userFormTitle">계정 추가</h2>
+      <button class="modal-close" data-close="userFormOverlay">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="ufUsernameField">
+        <label>아이디</label>
+        <input type="text" id="ufUsername" placeholder="아이디">
+      </div>
+      <label id="ufPasswordLabel">비밀번호</label>
+      <input type="password" id="ufPassword" placeholder="비밀번호">
+      <div class="modal-msg" id="userFormMsg"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-danger" id="userDeleteBtn" style="display:none">삭제</button>
+      <button class="modal-save" id="userSaveBtn">저장</button>
     </div>
   </div>
 </div>
@@ -457,6 +535,10 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&
 
 async function api(path, opts) {
   const r = await fetch(path, opts);
+  if (r.status === 401) {
+    location.href = '/login.html';
+    return new Promise(() => {}); // 리다이렉트되므로 이후 처리는 무시
+  }
   return r.json();
 }
 
@@ -708,6 +790,10 @@ function renderServerManagerLists() {
 }
 
 function openSettings() {
+  document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.settings-pane').forEach(p => p.style.display = 'none');
+  document.querySelector('.settings-tab[data-tab="servers"]').classList.add('active');
+  document.querySelector('.settings-pane[data-pane="servers"]').style.display = 'block';
   document.getElementById('settingsOverlay').classList.add('open');
 }
 document.getElementById('settingsBtn').addEventListener('click', openSettings);
@@ -781,6 +867,153 @@ document.getElementById('serverDeleteBtn').addEventListener('click', async () =>
   await loadServers();
 });
 
+/* ---------------- 설정 탭 전환 ---------------- */
+
+document.querySelectorAll('.settings-tab').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.settings-pane').forEach(p => p.style.display = 'none');
+    tab.classList.add('active');
+    document.querySelector(`.settings-pane[data-pane="${tab.dataset.tab}"]`).style.display = 'block';
+    if (tab.dataset.tab === 'general') loadGeneralSettings();
+    if (tab.dataset.tab === 'account') loadAccountSettings();
+  });
+});
+
+/* ---------------- 일반 설정 (새로고침 주기) ---------------- */
+
+let refreshIntervalSec = 15;
+let refreshTimer = null;
+
+function scheduleRefresh() {
+  if (refreshTimer) clearInterval(refreshTimer);
+  refreshTimer = setInterval(refresh, refreshIntervalSec * 1000);
+}
+
+async function loadGeneralSettings() {
+  const data = await api('/api/settings');
+  refreshIntervalSec = data.settings?.refreshInterval || 15;
+  document.getElementById('refreshIntervalInput').value = refreshIntervalSec;
+}
+
+document.getElementById('refreshIntervalInput').addEventListener('change', async (e) => {
+  const msg = document.getElementById('generalMsg');
+  const val = Math.max(5, Math.min(600, Number(e.target.value) || 15));
+  e.target.value = val;
+  const r = await api('/api/settings', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ refreshInterval: val }) });
+  if (r.ok) {
+    refreshIntervalSec = val;
+    scheduleRefresh();
+    msg.textContent = '저장했습니다.'; msg.className = 'modal-msg';
+  } else {
+    msg.textContent = r.error || '저장 실패'; msg.className = 'modal-msg error';
+  }
+});
+
+/* ---------------- 계정 / 접속 로그 ---------------- */
+
+let authState = { authEnabled: false, loggedIn: false, username: null };
+let usersCache = [];
+
+async function checkAuthStatus() {
+  authState = await api('/api/auth-status');
+  const badge = document.getElementById('usernameBadge');
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (authState.loggedIn) {
+    badge.textContent = authState.username;
+    badge.style.display = 'inline';
+    logoutBtn.style.display = 'inline-flex';
+  } else {
+    badge.style.display = 'none';
+    logoutBtn.style.display = 'none';
+  }
+}
+
+document.getElementById('logoutBtn').addEventListener('click', async () => {
+  await api('/api/logout', { method: 'POST' });
+  location.href = '/login.html';
+});
+
+function fmtLogTime(ts) {
+  return new Date(ts).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+async function loadAccountSettings() {
+  const hint = document.getElementById('authHint');
+  hint.textContent = authState.authEnabled
+    ? '로그인이 활성화되어 있습니다. 계정을 모두 지우면 다시 로그인 없이 열립니다.'
+    : '아직 계정이 없어 누구나 로그인 없이 볼 수 있습니다. 계정을 추가하면 그때부터 로그인이 필요해집니다.';
+
+  const usersData = await api('/api/users');
+  usersCache = usersData.users || [];
+  document.getElementById('userList').innerHTML = usersCache.length
+    ? usersCache.map(u => `<div class="server-list-item" data-edit-user="${u.id}"><span>${esc(u.username)}</span><span class="host">✎</span></div>`).join('')
+    : `<div class="empty" style="padding:6px 0;">등록된 계정이 없습니다.</div>`;
+
+  const logData = await api('/api/access-log');
+  const items = logData.items || [];
+  document.getElementById('accessLogList').innerHTML = items.length
+    ? items.slice(0, 30).map(it => `
+      <div class="access-log-item">
+        <span>${it.success ? '<span class="ok">성공</span>' : '<span class="fail">실패</span>'} · ${esc(it.username)} · ${esc(it.ip)}</span>
+        <span>${fmtLogTime(it.time)}</span>
+      </div>`).join('')
+    : `<div class="empty" style="padding:6px 0;">기록이 없습니다.</div>`;
+}
+
+let ufEditingId = null;
+
+function openUserForm(user) {
+  ufEditingId = user ? user.id : null;
+  document.getElementById('userFormTitle').textContent = user ? '비밀번호 변경' : '계정 추가';
+  document.getElementById('ufUsernameField').style.display = user ? 'none' : 'block';
+  document.getElementById('ufUsername').value = '';
+  document.getElementById('ufPassword').value = '';
+  document.getElementById('ufPasswordLabel').textContent = user ? '새 비밀번호' : '비밀번호';
+  document.getElementById('userDeleteBtn').style.display = user ? 'inline-block' : 'none';
+  document.getElementById('userFormMsg').textContent = '';
+  document.getElementById('userFormOverlay').classList.add('open');
+}
+
+document.getElementById('addUserBtn').addEventListener('click', () => openUserForm(null));
+
+document.getElementById('userSaveBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('userFormMsg');
+  const password = document.getElementById('ufPassword').value;
+  let r;
+  if (ufEditingId) {
+    if (!password) { msg.textContent = '새 비밀번호를 입력하세요.'; msg.className = 'modal-msg error'; return; }
+    r = await api(`/api/users/${ufEditingId}/password`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ password }) });
+  } else {
+    const username = document.getElementById('ufUsername').value.trim();
+    if (!username || !password) { msg.textContent = '아이디와 비밀번호를 입력하세요.'; msg.className = 'modal-msg error'; return; }
+    r = await api('/api/users', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ username, password }) });
+  }
+  if (r.ok) {
+    document.getElementById('userFormOverlay').classList.remove('open');
+    await checkAuthStatus();
+    await loadAccountSettings();
+  } else {
+    msg.textContent = r.error || '저장 실패'; msg.className = 'modal-msg error';
+  }
+});
+
+document.getElementById('userDeleteBtn').addEventListener('click', async () => {
+  if (!ufEditingId) return;
+  if (!confirm('이 계정을 삭제할까요?')) return;
+  const r = await api(`/api/users/${ufEditingId}`, { method: 'DELETE' });
+  if (r.ok) {
+    document.getElementById('userFormOverlay').classList.remove('open');
+    await checkAuthStatus();
+    await loadAccountSettings();
+  } else {
+    document.getElementById('userFormMsg').textContent = r.error || '삭제 실패';
+    document.getElementById('userFormMsg').className = 'modal-msg error';
+  }
+});
+
+document.getElementById('userFormOverlay').addEventListener('click', (e) => { if (e.target.id === 'userFormOverlay') e.currentTarget.classList.remove('open'); });
+
 /* ---------------- 새로고침 / 공용 이벤트 위임 ---------------- */
 
 async function refresh() {
@@ -805,6 +1038,13 @@ document.addEventListener('click', async (e) => {
   }
 
   if (e.target.closest('[data-open-settings]')) { openSettings(); return; }
+
+  const editUserBtn = e.target.closest('[data-edit-user]');
+  if (editUserBtn) {
+    const user = usersCache.find(u => u.id === editUserBtn.dataset.editUser);
+    if (user) openUserForm(user);
+    return;
+  }
 
   // 접속 시도 목록 -> 차단
   const blockBtn = e.target.closest('[data-block-ip]');
@@ -1103,8 +1343,8 @@ setInterval(loadTileStatus, 20000);
 
 document.getElementById('refreshBtn').addEventListener('click', refresh);
 
-refresh();
-setInterval(refresh, 15000);
+checkAuthStatus();
+loadGeneralSettings().then(() => { refresh(); scheduleRefresh(); });
 </script>
 </body>
 </html>

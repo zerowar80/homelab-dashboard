@@ -4,6 +4,9 @@ const axios = require('axios');
 const https = require('https');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const cookieSession = require('cookie-session');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,15 +14,12 @@ const PORT = process.env.PORT || 3000;
 // 홈랩 환경은 자체 서명 인증서를 쓰는 경우가 많아 검증을 끕니다.
 const insecureAgent = new https.Agent({ rejectUnauthorized: false });
 
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
 /* ------------------------- 설정 저장 (웹 UI 설정) ------------------------ */
 // docker-compose.yml에서 ./data 를 이 경로로 마운트하면 컨테이너를
 // 재생성해도(docker compose up --build) 설정이 사라지지 않습니다.
 const CONFIG_PATH = path.join(__dirname, 'data', 'config.json');
 
-let cfg = { proxmoxServers: [], synologyServers: [], groups: [] };
+let cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 } };
 
 function newId(prefix) {
   return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -35,7 +35,7 @@ function loadConfig() {
 
   if (!parsed) {
     // 파일이 없으면 최초 실행 - .env 값이 있으면 그걸로 시드
-    cfg = { proxmoxServers: [], synologyServers: [], groups: [] };
+    cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 } };
     if (process.env.PROXMOX_HOST) {
       cfg.proxmoxServers.push({
         id: newId('pve'), name: 'Proxmox',
@@ -52,11 +52,13 @@ function loadConfig() {
         password: process.env.SYNOLOGY_PASSWORD || '',
       });
     }
-    if (cfg.proxmoxServers.length || cfg.synologyServers.length) saveConfig();
+    cfg.sessionSecret = crypto.randomBytes(32).toString('hex');
+    saveConfig();
     return;
   }
 
-  cfg = { proxmoxServers: [], synologyServers: [], groups: [], ...parsed };
+  cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 }, ...parsed };
+  cfg.settings = { refreshInterval: 15, ...(parsed.settings || {}) };
 
   // 구버전(단일 서버) 설정 마이그레이션
   if (parsed.proxmox && parsed.proxmox.host && cfg.proxmoxServers.length === 0) {
@@ -67,6 +69,11 @@ function loadConfig() {
   }
   delete cfg.proxmox;
   delete cfg.synology;
+
+  if (!cfg.sessionSecret) {
+    cfg.sessionSecret = crypto.randomBytes(32).toString('hex');
+    saveConfig();
+  }
 }
 
 function saveConfig() {
@@ -75,6 +82,118 @@ function saveConfig() {
 }
 
 loadConfig();
+
+/* ------------------------------ 로그인/계정 ------------------------------ */
+
+function isAuthEnabled() { return cfg.users.length > 0; }
+
+app.use(express.json());
+app.use(cookieSession({
+  name: 'session',
+  secret: cfg.sessionSecret,
+  maxAge: 30 * 24 * 60 * 60 * 1000, // 30일
+  sameSite: 'lax',
+}));
+
+function requireAuth(req, res, next) {
+  if (!isAuthEnabled()) return next();
+  if (req.session && req.session.userId) return next();
+  return res.status(401).json({ ok: false, error: '로그인이 필요합니다' });
+}
+
+function logAccess(entry) {
+  cfg.accessLog.unshift({ time: Date.now(), ip: entry.ip, username: entry.username, success: entry.success });
+  cfg.accessLog = cfg.accessLog.slice(0, 200);
+  saveConfig();
+}
+
+app.get('/api/auth-status', (req, res) => {
+  res.json({
+    authEnabled: isAuthEnabled(),
+    loggedIn: !!(req.session && req.session.userId),
+    username: req.session?.username || null,
+  });
+});
+
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body || {};
+  const user = cfg.users.find((u) => u.username === username);
+  const ok = user && bcrypt.compareSync(password || '', user.passwordHash);
+  logAccess({ ip: req.ip, username: username || '(빈 값)', success: !!ok });
+  if (!ok) return res.status(401).json({ ok: false, error: '아이디 또는 비밀번호가 올바르지 않습니다' });
+  req.session.userId = user.id;
+  req.session.username = user.username;
+  res.json({ ok: true });
+});
+
+app.post('/api/logout', (req, res) => {
+  req.session = null;
+  res.json({ ok: true });
+});
+
+app.get('/api/access-log', requireAuth, (req, res) => {
+  res.json({ items: cfg.accessLog });
+});
+
+app.get('/api/users', requireAuth, (req, res) => {
+  res.json({ users: cfg.users.map((u) => ({ id: u.id, username: u.username })) });
+});
+
+// 계정이 하나도 없을 때는(=로그인 기능이 아직 꺼져 있을 때) 인증 없이 첫 계정을 만들 수 있습니다.
+// 계정이 이미 있으면 로그인한 사용자만 추가할 수 있습니다.
+app.post('/api/users', requireAuth, (req, res) => {
+  const { username, password } = req.body || {};
+  if (!username || !password) return res.status(400).json({ ok: false, error: '아이디와 비밀번호를 입력하세요' });
+  if (cfg.users.find((u) => u.username === username)) return res.status(400).json({ ok: false, error: '이미 있는 아이디입니다' });
+  const user = { id: newId('user'), username, passwordHash: bcrypt.hashSync(password, 10) };
+  cfg.users.push(user);
+  saveConfig();
+  res.json({ ok: true, user: { id: user.id, username: user.username } });
+});
+
+app.delete('/api/users/:id', requireAuth, (req, res) => {
+  if (cfg.users.length <= 1) return res.status(400).json({ ok: false, error: '마지막 계정은 삭제할 수 없습니다' });
+  cfg.users = cfg.users.filter((u) => u.id !== req.params.id);
+  saveConfig();
+  res.json({ ok: true });
+});
+
+app.put('/api/users/:id/password', requireAuth, (req, res) => {
+  const user = cfg.users.find((u) => u.id === req.params.id);
+  if (!user) return res.status(404).json({ ok: false, error: '계정을 찾을 수 없습니다' });
+  const { password } = req.body || {};
+  if (!password) return res.status(400).json({ ok: false, error: '새 비밀번호를 입력하세요' });
+  user.passwordHash = bcrypt.hashSync(password, 10);
+  saveConfig();
+  res.json({ ok: true });
+});
+
+/* ------------------------------ 일반 설정 ------------------------------ */
+
+app.get('/api/settings', (req, res) => {
+  res.json({ settings: cfg.settings });
+});
+
+app.put('/api/settings', requireAuth, (req, res) => {
+  const { refreshInterval } = req.body || {};
+  if (refreshInterval) cfg.settings.refreshInterval = Math.max(5, Math.min(600, Number(refreshInterval) || 15));
+  saveConfig();
+  res.json({ ok: true, settings: cfg.settings });
+});
+
+/* ------------------------------ 로그인 게이트 ------------------------------ */
+
+app.get('/', (req, res, next) => {
+  if (isAuthEnabled() && !(req.session && req.session.userId)) {
+    return res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  }
+  next();
+});
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 이 아래의 모든 /api/* 라우트는 계정이 하나 이상 등록되어 있으면 로그인을 요구합니다.
+app.use('/api', requireAuth);
 
 function findPve(id) { return cfg.proxmoxServers.find((s) => s.id === id); }
 function findSyn(id) { return cfg.synologyServers.find((s) => s.id === id); }
