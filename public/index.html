@@ -49,8 +49,8 @@
   button.refresh:hover{ background:#262b34; }
   button.refresh:active{ transform:translateY(1px); }
   .server-grid{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px;
-    padding:16px; max-width:2200px; margin:0 auto;
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:12px;
+    padding:16px; max-width:2600px; margin:0 auto;
     align-items:start;
   }
   @media (max-width:900px){ .server-grid{ grid-template-columns:1fr; } }
@@ -562,12 +562,14 @@
         <input type="text" id="sfTokenId" placeholder="root@pam!dashboard">
         <label>API 토큰 Secret</label>
         <input type="password" id="sfTokenSecret" placeholder="변경하려면 입력">
+        <div class="checkbox-row"><input type="checkbox" id="sfHideVmCard"><label for="sfHideVmCard">가상머신/컨테이너 카드 숨기기</label></div>
       </div>
       <div id="sfSynFields">
         <label>계정</label>
         <input type="text" id="sfUser" placeholder="dashboard-readonly">
         <label>비밀번호</label>
         <input type="password" id="sfPassword" placeholder="변경하려면 입력">
+        <div class="checkbox-row"><input type="checkbox" id="sfHideExtraCard"><label for="sfHideExtraCard">Docker/세션 카드 숨기기</label></div>
       </div>
 
       <div class="modal-msg" id="serverFormMsg"></div>
@@ -617,6 +619,7 @@ function resizeKeyFor(el) {
   if (el.dataset.pveId) return 'size:pve:' + el.dataset.pveId;
   if (el.dataset.synId) return 'size:syn:' + el.dataset.synId;
   if (el.dataset.vmId) return 'size:vm:' + el.dataset.vmId;
+  if (el.dataset.synextraId) return 'size:synextra:' + el.dataset.synextraId;
   if (el.dataset.tileId) return 'size:tile:' + el.dataset.tileId;
   return null;
 }
@@ -640,7 +643,7 @@ function initResizable(el) {
 }
 
 function initAllResizables() {
-  document.querySelectorAll('[data-pve-id], [data-syn-id], [data-vm-id], [data-tile-id]').forEach(initResizable);
+  document.querySelectorAll('[data-pve-id], [data-syn-id], [data-vm-id], [data-synextra-id], [data-tile-id]').forEach(initResizable);
 }
 
 async function api(path, opts) {
@@ -686,12 +689,13 @@ function renderServerGrid() {
     lastGridSignature = null;
     return;
   }
-  // 서버 구성(개수/순서)이 안 바뀌었으면 카드 틀은 그대로 두고 내용만 새로 채웁니다.
+  // 서버 구성(개수/순서/카드 숨김 여부)이 안 바뀌었으면 카드 틀은 그대로 두고 내용만 새로 채웁니다.
   // (매번 통째로 다시 그리면 실시간 업데이트마다 화면이 깜빡여서 "새로고침 느낌"이 납니다)
-  const signature = pveServers.map(s => 'p:' + s.id).join(',') + '|' + synServers.map(s => 's:' + s.id).join(',');
+  const signature = pveServers.map(s => `p:${s.id}:${s.hideVmCard?1:0}`).join(',') + '|' + synServers.map(s => `s:${s.id}:${s.hideExtraCard?1:0}`).join(',');
   if (signature !== lastGridSignature) {
-    // Proxmox 모니터링 카드 바로 옆에 그 서버의 VM/컨테이너 카드를 붙여서 배치합니다.
-    grid.innerHTML = pveServers.map(s => pveCardShell(s) + vmCardShell(s)).join('') + synServers.map(s => synCardShell(s)).join('');
+    // Proxmox/Synology 모니터링 카드 바로 옆에 그 서버의 VM·Docker/세션 카드를 붙여서 배치합니다 (숨김 설정 시 제외).
+    grid.innerHTML = pveServers.map(s => pveCardShell(s) + (s.hideVmCard ? '' : vmCardShell(s))).join('') +
+      synServers.map(s => synCardShell(s) + (s.hideExtraCard ? '' : synExtraCardShell(s))).join('');
     lastGridSignature = signature;
   }
   pveServers.forEach(loadPveZone);
@@ -852,6 +856,19 @@ function synCardShell(server) {
     </section>`;
 }
 
+function synExtraCardShell(server) {
+  return `
+    <section class="zone" data-synextra-id="${server.id}">
+      <div class="zone-head">
+        <div class="name">
+          <span class="drag-handle" draggable="true" data-syn-drag="${server.id}" title="드래그해서 순서 바꾸기">⠿</span>
+          ${esc(server.name)} · Docker/세션
+        </div>
+      </div>
+      <div data-role="extrabody"><div class="empty">불러오는 중…</div></div>
+    </section>`;
+}
+
 function synStorageHtml(storage) {
   const volumes = (storage && storage.volumes) || [];
   if (volumes.length === 0) return `<div class="subhead">스토리지</div><div class="empty">볼륨 정보를 가져오지 못했습니다.</div>`;
@@ -867,41 +884,69 @@ function synStorageHtml(storage) {
   }).join('') + `</div>`;
 }
 
-function synDockerHtml(res) {
+function synDockerHtml(res, serverId) {
   if (res.ok === false) return `<div class="subhead">Docker 컨테이너</div><div class="error-box">불러오기 실패: ${esc(res.error || '알 수 없는 오류')}</div>`;
   const items = res.items || [];
   if (items.length === 0) return `<div class="subhead">Docker 컨테이너</div><div class="list"><div class="empty">컨테이너가 없습니다.</div></div>`;
-  return `<div class="subhead">Docker 컨테이너</div><div class="list">` + items.map(c => `
+  return `<div class="subhead">Docker 컨테이너</div><div class="list">` + items.map(c => {
+    const isRunning = (c.status || '').toLowerCase().includes('run');
+    const ctx = `data-server="${serverId}" data-container="${esc(c.name || '')}"`;
+    const actions = isRunning
+      ? `<button class="icon-btn" data-docker-action="restart" ${ctx} title="재시작">⟳</button>
+         <button class="icon-btn" data-docker-action="stop" ${ctx} title="종료">■</button>`
+      : `<button class="icon-btn" data-docker-action="start" ${ctx} title="시작">▶</button>`;
+    return `
     <div class="row" data-toggle>
       <div class="row-left"><span class="name">${esc(c.name || c.id)}</span></div>
-      <div class="row-right">${dockerPillFor(c.status)}</div>
+      <div class="row-right">${dockerPillFor(c.status)}<span class="guest-actions">${actions}</span></div>
       <div class="detail">이미지 <code>${esc(c.image || '-')}</code></div>
-    </div>`).join('') + `</div>`;
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+// 세션 데이터의 정확한 필드 이름이 DSM 버전마다 다를 수 있어 여러 후보를 시도하고,
+// 그래도 못 찾으면 원본 값을 그대로 보여줘서 디버깅할 수 있게 합니다.
+function pickField(obj, keys) {
+  for (const k of keys) {
+    if (obj && obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k];
+  }
+  return null;
 }
 
 function synSessionsHtml(res) {
   if (res.ok === false) return `<div class="subhead">로그인 세션</div><div class="error-box">불러오기 실패: ${esc(res.error || '알 수 없는 오류')}</div>`;
   const items = res.items || [];
   if (items.length === 0) return `<div class="subhead">로그인 세션</div><div class="list"><div class="empty">현재 로그인된 세션이 없습니다.</div></div>`;
-  return `<div class="subhead">로그인 세션</div><div class="list">` + items.map(it => `
+  return `<div class="subhead">로그인 세션</div><div class="list">` + items.map(it => {
+    const who = pickField(it, ['name', 'account', 'user', 'login_name', 'user_name']);
+    const ip = pickField(it, ['ip', 'address', 'client_ip', 'remote_ip', 'ip_addr']);
+    if (!who && !ip) {
+      // 필드 이름을 못 찾았을 때는 원본을 그대로 보여줍니다 (디버깅용)
+      return `<div class="conn-row"><div class="conn-left"><span class="who" style="font-family:var(--mono); font-size:11px;">${esc(JSON.stringify(it).slice(0, 120))}</span></div></div>`;
+    }
+    return `
     <div class="conn-row">
       <div class="conn-left">
-        <span class="who">${esc(it.name || it.account || '-')}</span>
-        <span class="ip">${esc(it.ip || '-')}</span>
+        <span class="who">${esc(who || '-')}</span>
+        <span class="ip">${esc(ip || '-')}</span>
       </div>
-    </div>`).join('') + `</div>`;
+    </div>`;
+  }).join('') + `</div>`;
 }
 
 async function loadSynZone(server) {
   const card = document.querySelector(`[data-syn-id="${server.id}"]`);
+  const extraCard = document.querySelector(`[data-synextra-id="${server.id}"]`);
   if (!card) return;
   const dot = card.querySelector('[data-role="dot"]');
   const body = card.querySelector('[data-role="body"]');
+  const extraBody = extraCard ? extraCard.querySelector('[data-role="extrabody"]') : null;
 
   const main = await api(`/api/synology/${server.id}`);
   if (!main.ok) {
     dot.className = 'dot bad';
     body.innerHTML = `<div class="error-box">연결 실패: ${esc(main.error)}</div>`;
+    if (extraBody) extraBody.innerHTML = `<div class="error-box">연결 실패: ${esc(main.error)}</div>`;
     return;
   }
   dot.className = 'dot ok';
@@ -925,9 +970,11 @@ async function loadSynZone(server) {
       <div class="metric"><div class="label">가동 시간</div><div class="value" style="font-size:14px">${fmtSynUptime(info.up_time)}</div></div>
     </div>` +
     synStorageHtml(main.storage) +
-    synDockerHtml(docker) +
-    synSessionsHtml(sessions) +
     blocklistHtml(block.items || [], server.id, 'syn');
+
+  if (extraBody) {
+    extraBody.innerHTML = synDockerHtml(docker, server.id) + synSessionsHtml(sessions);
+  }
 }
 
 /* ---------------- 서버 관리 모달 ---------------- */
@@ -973,10 +1020,12 @@ function openServerForm(type, server) {
     document.getElementById('sfTokenId').value = server?.tokenId || '';
     document.getElementById('sfTokenSecret').value = '';
     document.getElementById('sfTokenSecret').placeholder = server?.hasTokenSecret ? '•••••• (저장됨, 변경하려면 입력)' : '토큰 secret 입력';
+    document.getElementById('sfHideVmCard').checked = !!server?.hideVmCard;
   } else {
     document.getElementById('sfUser').value = server?.user || '';
     document.getElementById('sfPassword').value = '';
     document.getElementById('sfPassword').placeholder = server?.hasPassword ? '•••••• (저장됨, 변경하려면 입력)' : '비밀번호 입력';
+    document.getElementById('sfHideExtraCard').checked = !!server?.hideExtraCard;
   }
 
   document.getElementById('serverDeleteBtn').style.display = server ? 'inline-block' : 'none';
@@ -994,9 +1043,11 @@ document.getElementById('serverSaveBtn').addEventListener('click', async () => {
   if (sfType === 'pve') {
     payload.tokenId = document.getElementById('sfTokenId').value.trim();
     payload.tokenSecret = document.getElementById('sfTokenSecret').value.trim();
+    payload.hideVmCard = document.getElementById('sfHideVmCard').checked;
   } else {
     payload.user = document.getElementById('sfUser').value.trim();
     payload.password = document.getElementById('sfPassword').value.trim();
+    payload.hideExtraCard = document.getElementById('sfHideExtraCard').checked;
   }
 
   const base = sfType === 'pve' ? '/api/proxmox/servers' : '/api/synology/servers';
@@ -1272,6 +1323,20 @@ document.addEventListener('click', async (e) => {
     guestActionBtn.disabled = true;
     const r = await api(`/api/proxmox/${server}/guest/${node}/${type}/${vmid}/${action}`, { method: 'POST' });
     guestActionBtn.disabled = false;
+    if (!r.ok) alert(`${label} 실패: ` + (r.error || '알 수 없는 오류'));
+    return;
+  }
+
+  // Docker 컨테이너 시작/종료/재시작
+  const dockerActionBtn = e.target.closest('[data-docker-action]');
+  if (dockerActionBtn) {
+    const action = dockerActionBtn.dataset.dockerAction;
+    const { server, container } = dockerActionBtn.dataset;
+    const label = { start: '시작', stop: '종료', restart: '재시작' }[action] || action;
+    if (action !== 'start' && !confirm(`"${container}" 컨테이너를 정말 ${label}하시겠습니까?`)) return;
+    dockerActionBtn.disabled = true;
+    const r = await api(`/api/synology/${server}/docker/${encodeURIComponent(container)}/${action}`, { method: 'POST' });
+    dockerActionBtn.disabled = false;
     if (!r.ok) alert(`${label} 실패: ` + (r.error || '알 수 없는 오류'));
     return;
   }
@@ -1604,7 +1669,8 @@ document.addEventListener('dragstart', (e) => {
 
 document.addEventListener('dragover', (e) => {
   if (e.target.closest('[data-group-id]') || e.target.closest('.tile-grid') ||
-      e.target.closest('[data-pve-id]') || e.target.closest('[data-syn-id]') || e.target.closest('[data-vm-id]')) {
+      e.target.closest('[data-pve-id]') || e.target.closest('[data-syn-id]') ||
+      e.target.closest('[data-vm-id]') || e.target.closest('[data-synextra-id]')) {
     e.preventDefault();
   }
 });
@@ -1693,10 +1759,12 @@ document.addEventListener('drop', async (e) => {
   if (data.startsWith('syn:')) {
     e.preventDefault();
     const draggedId = data.slice('syn:'.length);
-    const targetCard = e.target.closest('[data-syn-id]');
-    if (!targetCard || targetCard.dataset.synId === draggedId) return;
+    const targetCard = e.target.closest('[data-syn-id]') || e.target.closest('[data-synextra-id]');
+    if (!targetCard) return;
+    const targetId = targetCard.dataset.synId || targetCard.dataset.synextraId;
+    if (targetId === draggedId) return;
     const from = synServers.findIndex(s => s.id === draggedId);
-    const to = synServers.findIndex(s => s.id === targetCard.dataset.synId);
+    const to = synServers.findIndex(s => s.id === targetId);
     if (from === -1 || to === -1) return;
     const [moved] = synServers.splice(from, 1);
     synServers.splice(to, 0, moved);

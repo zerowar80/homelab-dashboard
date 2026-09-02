@@ -351,10 +351,10 @@ function findPve(id) { return cfg.proxmoxServers.find((s) => s.id === id); }
 function findSyn(id) { return cfg.synologyServers.find((s) => s.id === id); }
 
 function maskPve(s) {
-  return { id: s.id, name: s.name, host: s.host, tokenId: s.tokenId, hasTokenSecret: !!s.tokenSecret };
+  return { id: s.id, name: s.name, host: s.host, tokenId: s.tokenId, hasTokenSecret: !!s.tokenSecret, hideVmCard: !!s.hideVmCard };
 }
 function maskSyn(s) {
-  return { id: s.id, name: s.name, host: s.host, user: s.user, hasPassword: !!s.password };
+  return { id: s.id, name: s.name, host: s.host, user: s.user, hasPassword: !!s.password, hideExtraCard: !!s.hideExtraCard };
 }
 
 // 설정 화면용: 등록된 서버 목록 (마스킹된 값)
@@ -385,11 +385,12 @@ app.put('/api/proxmox/servers/reorder', (req, res) => {
 app.put('/api/proxmox/servers/:id', (req, res) => {
   const s = findPve(req.params.id);
   if (!s) return res.status(404).json({ ok: false, error: '서버를 찾을 수 없습니다' });
-  const { name, host, tokenId, tokenSecret } = req.body || {};
+  const { name, host, tokenId, tokenSecret, hideVmCard } = req.body || {};
   if (name) s.name = name;
   if (host) s.host = host;
   if (tokenId) s.tokenId = tokenId;
   if (tokenSecret) s.tokenSecret = tokenSecret;
+  if (hideVmCard !== undefined) s.hideVmCard = !!hideVmCard;
   saveConfig();
   res.json({ ok: true, server: maskPve(s) });
 });
@@ -420,11 +421,12 @@ app.put('/api/synology/servers/reorder', (req, res) => {
 app.put('/api/synology/servers/:id', (req, res) => {
   const s = findSyn(req.params.id);
   if (!s) return res.status(404).json({ ok: false, error: '서버를 찾을 수 없습니다' });
-  const { name, host, user, password } = req.body || {};
+  const { name, host, user, password, hideExtraCard } = req.body || {};
   if (name) s.name = name;
   if (host) s.host = host;
   if (user) s.user = user;
   if (password) s.password = password;
+  if (hideExtraCard !== undefined) s.hideExtraCard = !!hideExtraCard;
   delete synSidMap[s.id];
   saveConfig();
   res.json({ ok: true, server: maskSyn(s) });
@@ -755,6 +757,30 @@ app.get('/api/synology/:id/docker', async (req, res) => {
     res.json({ ok: true, items: items.map((c) => ({ name: c.name, status: c.status, image: c.image || c.path || '' })) });
   } catch (err) {
     res.json({ ok: false, error: err.message, items: [] });
+  }
+});
+
+// Docker 컨테이너 시작/종료/재시작
+const SYN_DOCKER_ACTIONS = new Set(['start', 'stop', 'restart']);
+
+app.post('/api/synology/:id/docker/:name/:action', async (req, res) => {
+  const server = findSyn(req.params.id);
+  if (!server) return res.status(404).json({ ok: false, error: '서버를 찾을 수 없습니다' });
+  const { name, action } = req.params;
+  if (!SYN_DOCKER_ACTIONS.has(action)) return res.status(400).json({ ok: false, error: '지원하지 않는 동작입니다' });
+  try {
+    const sid = await synLogin(server);
+    const apiName = 'SYNO.Docker.Container';
+    const version = await synApiMaxVersion(server, sid, apiName);
+    const r = await axios.get(`${server.host}/webapi/entry.cgi`, {
+      params: { api: apiName, version, method: action, name, _sid: sid },
+      httpsAgent: insecureAgent, timeout: 10000,
+    });
+    if (!r.data.success) throw new Error('API 오류 코드 ' + r.data.error?.code);
+    broadcastRefresh();
+    res.json({ ok: true });
+  } catch (err) {
+    res.json({ ok: false, error: err.message });
   }
 });
 
