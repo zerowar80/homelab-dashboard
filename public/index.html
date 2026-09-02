@@ -431,6 +431,7 @@
     <div class="settings-tabs">
       <button class="settings-tab active" data-tab="servers">서버</button>
       <button class="settings-tab" data-tab="general">일반</button>
+      <button class="settings-tab" data-tab="notify">알림</button>
       <button class="settings-tab" data-tab="account">계정</button>
     </div>
     <div class="modal-body">
@@ -453,6 +454,35 @@
           <label>몇 초마다 자동으로 새로고침할지 <span class="hint">(5~600초)</span></label>
           <input type="number" id="refreshIntervalInput" min="5" max="600" step="5">
           <div class="modal-msg" id="generalMsg"></div>
+        </div>
+      </div>
+
+      <div class="settings-pane" data-pane="notify" style="display:none">
+        <div class="modal-section">
+          <h3>Discord</h3>
+          <label>웹훅 URL <span class="hint">(채널 설정 → 연동 → 웹후크 만들기)</span></label>
+          <input type="password" id="notifyDiscordWebhook" placeholder="변경하려면 입력">
+        </div>
+        <div class="modal-section">
+          <h3>Telegram</h3>
+          <label>봇 토큰 <span class="hint">(BotFather에게 /newbot 으로 발급)</span></label>
+          <input type="password" id="notifyTelegramToken" placeholder="변경하려면 입력">
+          <label>채팅 ID <span class="hint">(예: @userinfobot 으로 확인)</span></label>
+          <input type="text" id="notifyTelegramChatId" placeholder="숫자 ID">
+        </div>
+        <div class="modal-section">
+          <h3>어떤 상황에 알림을 보낼까요</h3>
+          <div class="checkbox-row"><input type="checkbox" id="evtServerDown"><label for="evtServerDown">서버(Proxmox/Synology)가 응답하지 않을 때</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="evtServerUp"><label for="evtServerUp">서버가 다시 복구됐을 때</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="evtTileDown"><label for="evtTileDown">서비스 바로가기가 오프라인일 때</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="evtTileUp"><label for="evtTileUp">서비스 바로가기가 복구됐을 때</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="evtLoginFail"><label for="evtLoginFail">대시보드 로그인 실패 시도가 있을 때</label></div>
+          <div class="hint" style="margin-top:8px;">서버 상태는 1분마다 확인합니다 (브라우저를 안 열어놔도 동작).</div>
+        </div>
+        <div class="modal-msg" id="notifyMsg"></div>
+        <div style="display:flex; gap:8px; margin-top:4px;">
+          <button class="add-tile-card" id="notifyTestBtn" style="min-height:40px; flex:1;">🔔 테스트 메시지 보내기</button>
+          <button class="modal-save" id="notifySaveBtn" style="margin:0;">저장</button>
         </div>
       </div>
 
@@ -598,7 +628,10 @@ function pveCardShell(server) {
   return `
     <section class="zone" data-pve-id="${server.id}">
       <div class="zone-head">
-        <div class="name"><span class="dot off" data-role="dot"></span>${esc(server.name)}</div>
+        <div class="name">
+          <span class="drag-handle" draggable="true" data-pve-drag="${server.id}" title="드래그해서 순서 바꾸기">⠿</span>
+          <span class="dot off" data-role="dot"></span>${esc(server.name)}
+        </div>
         <div style="display:flex; gap:6px; align-items:center;">
           <a class="open-link" href="${esc(server.host)}" target="_blank" rel="noopener">웹 UI 열기 ↗</a>
           <button class="icon-btn" data-edit-server="pve:${server.id}" title="서버 설정">⚙</button>
@@ -709,7 +742,10 @@ function synCardShell(server) {
   return `
     <section class="zone" data-syn-id="${server.id}">
       <div class="zone-head">
-        <div class="name"><span class="dot off" data-role="dot"></span>${esc(server.name)}</div>
+        <div class="name">
+          <span class="drag-handle" draggable="true" data-syn-drag="${server.id}" title="드래그해서 순서 바꾸기">⠿</span>
+          <span class="dot off" data-role="dot"></span>${esc(server.name)}
+        </div>
         <div style="display:flex; gap:6px; align-items:center;">
           <a class="open-link" href="${esc(server.host)}" target="_blank" rel="noopener">웹 UI 열기 ↗</a>
           <button class="icon-btn" data-edit-server="syn:${server.id}" title="서버 설정">⚙</button>
@@ -894,7 +930,61 @@ document.querySelectorAll('.settings-tab').forEach((tab) => {
     document.querySelector(`.settings-pane[data-pane="${tab.dataset.tab}"]`).style.display = 'block';
     if (tab.dataset.tab === 'general') loadGeneralSettings();
     if (tab.dataset.tab === 'account') loadAccountSettings();
+    if (tab.dataset.tab === 'notify') loadNotifySettings();
   });
+});
+
+/* ---------------- 알림 (Discord / Telegram) ---------------- */
+
+async function loadNotifySettings() {
+  const data = await api('/api/notifications');
+  document.getElementById('notifyDiscordWebhook').value = '';
+  document.getElementById('notifyDiscordWebhook').placeholder = data.hasDiscordWebhook ? '•••••• (저장됨, 변경하려면 입력)' : 'https://discord.com/api/webhooks/...';
+  document.getElementById('notifyTelegramToken').value = '';
+  document.getElementById('notifyTelegramToken').placeholder = data.hasTelegramBotToken ? '•••••• (저장됨, 변경하려면 입력)' : '123456:ABC-DEF...';
+  document.getElementById('notifyTelegramChatId').value = data.telegramChatId || '';
+  document.getElementById('evtServerDown').checked = !!data.events?.serverDown;
+  document.getElementById('evtServerUp').checked = !!data.events?.serverUp;
+  document.getElementById('evtTileDown').checked = !!data.events?.tileDown;
+  document.getElementById('evtTileUp').checked = !!data.events?.tileUp;
+  document.getElementById('evtLoginFail').checked = !!data.events?.loginFail;
+  document.getElementById('notifyMsg').textContent = '';
+}
+
+document.getElementById('notifySaveBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('notifyMsg');
+  const payload = {
+    discordWebhook: document.getElementById('notifyDiscordWebhook').value.trim(),
+    telegramBotToken: document.getElementById('notifyTelegramToken').value.trim(),
+    telegramChatId: document.getElementById('notifyTelegramChatId').value.trim(),
+    events: {
+      serverDown: document.getElementById('evtServerDown').checked,
+      serverUp: document.getElementById('evtServerUp').checked,
+      tileDown: document.getElementById('evtTileDown').checked,
+      tileUp: document.getElementById('evtTileUp').checked,
+      loginFail: document.getElementById('evtLoginFail').checked,
+    },
+  };
+  const r = await api('/api/notifications', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  if (r.ok) {
+    msg.textContent = '저장했습니다.'; msg.className = 'modal-msg';
+    await loadNotifySettings();
+  } else {
+    msg.textContent = r.error || '저장 실패'; msg.className = 'modal-msg error';
+  }
+});
+
+document.getElementById('notifyTestBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('notifyMsg');
+  const btn = document.getElementById('notifyTestBtn');
+  btn.textContent = '보내는 중…'; btn.disabled = true;
+  const r = await api('/api/notifications/test', { method: 'POST' });
+  if (r.ok) {
+    msg.textContent = '테스트 메시지를 보냈습니다. Discord/Telegram을 확인해보세요.'; msg.className = 'modal-msg';
+  } else {
+    msg.textContent = r.error || '전송 실패 (webhook/토큰 값을 확인하세요)'; msg.className = 'modal-msg error';
+  }
+  btn.textContent = '🔔 테스트 메시지 보내기'; btn.disabled = false;
 });
 
 /* ---------------- 일반 설정 (새로고침 주기) ---------------- */
@@ -1357,17 +1447,24 @@ document.addEventListener('click', (e) => {
 document.getElementById('groupModalOverlay').addEventListener('click', (e) => { if (e.target.id === 'groupModalOverlay') e.currentTarget.classList.remove('open'); });
 document.getElementById('tileModalOverlay').addEventListener('click', (e) => { if (e.target.id === 'tileModalOverlay') e.currentTarget.classList.remove('open'); });
 
-/* ---------------- 그룹/타일 드래그앤드롭 순서 변경 ---------------- */
+/* ---------------- 그룹/타일/서버 카드 드래그앤드롭 순서 변경 ---------------- */
 
 document.addEventListener('dragstart', (e) => {
   const gh = e.target.closest('[data-group-drag]');
   if (gh) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'group:' + gh.dataset.groupDrag); return; }
   const th = e.target.closest('[data-tile-drag]');
   if (th) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'tile:' + th.dataset.tileDrag + ':' + th.dataset.tileGroup); return; }
+  const ph = e.target.closest('[data-pve-drag]');
+  if (ph) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'pve:' + ph.dataset.pveDrag); return; }
+  const sh = e.target.closest('[data-syn-drag]');
+  if (sh) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'syn:' + sh.dataset.synDrag); return; }
 });
 
 document.addEventListener('dragover', (e) => {
-  if (e.target.closest('[data-group-id]') || e.target.closest('[data-tile-id]')) e.preventDefault();
+  if (e.target.closest('[data-group-id]') || e.target.closest('.tile-grid') ||
+      e.target.closest('[data-pve-id]') || e.target.closest('[data-syn-id]')) {
+    e.preventDefault();
+  }
 });
 
 document.addEventListener('drop', async (e) => {
@@ -1391,20 +1488,76 @@ document.addEventListener('drop', async (e) => {
 
   if (data.startsWith('tile:')) {
     e.preventDefault();
-    const [, draggedId, groupId] = data.split(':');
-    const targetTile = e.target.closest('[data-tile-id]');
-    if (!targetTile || targetTile.dataset.tileId === draggedId) return;
-    const group = groupsCache.find(g => g.id === groupId);
-    if (!group) return;
-    const stillInSameGroup = (group.tiles || []).some(t => t.id === targetTile.dataset.tileId);
-    if (!stillInSameGroup) return; // 다른 그룹으로의 이동은 아직 지원하지 않습니다
-    const from = group.tiles.findIndex(t => t.id === draggedId);
-    const to = group.tiles.findIndex(t => t.id === targetTile.dataset.tileId);
-    if (from === -1 || to === -1) return;
-    const [moved] = group.tiles.splice(from, 1);
-    group.tiles.splice(to, 0, moved);
+    const [, draggedId, fromGroupId] = data.split(':');
+    const targetGroupCard = e.target.closest('[data-group-id]');
+    if (!targetGroupCard) return;
+    const toGroupId = targetGroupCard.dataset.groupId;
+    const targetTileEl = e.target.closest('[data-tile-id]');
+    const targetTileId = targetTileEl && targetTileEl.dataset.tileId !== draggedId ? targetTileEl.dataset.tileId : null;
+
+    const fromGroup = groupsCache.find(g => g.id === fromGroupId);
+    const toGroup = groupsCache.find(g => g.id === toGroupId);
+    if (!fromGroup || !toGroup) return;
+
+    if (fromGroupId === toGroupId) {
+      // 같은 그룹 안에서 순서만 변경
+      if (!targetTileId) return;
+      const from = fromGroup.tiles.findIndex(t => t.id === draggedId);
+      const to = fromGroup.tiles.findIndex(t => t.id === targetTileId);
+      if (from === -1 || to === -1) return;
+      const [moved] = fromGroup.tiles.splice(from, 1);
+      fromGroup.tiles.splice(to, 0, moved);
+      renderGroups(groupsCache);
+      await api(`/api/groups/${fromGroup.id}/tiles/reorder`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ order: fromGroup.tiles.map(t => t.id) }) });
+      return;
+    }
+
+    // 다른 그룹으로 이동
+    const tileIdx = fromGroup.tiles.findIndex(t => t.id === draggedId);
+    if (tileIdx === -1) return;
+    const [moved] = fromGroup.tiles.splice(tileIdx, 1);
+    toGroup.tiles = toGroup.tiles || [];
+    if (targetTileId) {
+      const insertAt = toGroup.tiles.findIndex(t => t.id === targetTileId);
+      toGroup.tiles.splice(insertAt === -1 ? toGroup.tiles.length : insertAt, 0, moved);
+    } else {
+      toGroup.tiles.push(moved);
+    }
     renderGroups(groupsCache);
-    await api(`/api/groups/${group.id}/tiles/reorder`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ order: group.tiles.map(t => t.id) }) });
+    await api(`/api/tiles/${draggedId}/move`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ toGroupId: toGroup.id, order: toGroup.tiles.map(t => t.id) }),
+    });
+    return;
+  }
+
+  if (data.startsWith('pve:')) {
+    e.preventDefault();
+    const draggedId = data.slice('pve:'.length);
+    const targetCard = e.target.closest('[data-pve-id]');
+    if (!targetCard || targetCard.dataset.pveId === draggedId) return;
+    const from = pveServers.findIndex(s => s.id === draggedId);
+    const to = pveServers.findIndex(s => s.id === targetCard.dataset.pveId);
+    if (from === -1 || to === -1) return;
+    const [moved] = pveServers.splice(from, 1);
+    pveServers.splice(to, 0, moved);
+    renderServerGrid();
+    await api('/api/proxmox/servers/reorder', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ order: pveServers.map(s => s.id) }) });
+    return;
+  }
+
+  if (data.startsWith('syn:')) {
+    e.preventDefault();
+    const draggedId = data.slice('syn:'.length);
+    const targetCard = e.target.closest('[data-syn-id]');
+    if (!targetCard || targetCard.dataset.synId === draggedId) return;
+    const from = synServers.findIndex(s => s.id === draggedId);
+    const to = synServers.findIndex(s => s.id === targetCard.dataset.synId);
+    if (from === -1 || to === -1) return;
+    const [moved] = synServers.splice(from, 1);
+    synServers.splice(to, 0, moved);
+    renderServerGrid();
+    await api('/api/synology/servers/reorder', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ order: synServers.map(s => s.id) }) });
   }
 });
 

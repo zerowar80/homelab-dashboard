@@ -19,7 +19,12 @@ const insecureAgent = new https.Agent({ rejectUnauthorized: false });
 // 재생성해도(docker compose up --build) 설정이 사라지지 않습니다.
 const CONFIG_PATH = path.join(__dirname, 'data', 'config.json');
 
-let cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 } };
+const DEFAULT_NOTIFICATIONS = {
+  discordWebhook: '', telegramBotToken: '', telegramChatId: '',
+  events: { serverDown: true, serverUp: true, tileDown: true, tileUp: true, loginFail: true },
+};
+
+let cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 }, notifications: { ...DEFAULT_NOTIFICATIONS } };
 
 function newId(prefix) {
   return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -35,7 +40,7 @@ function loadConfig() {
 
   if (!parsed) {
     // 파일이 없으면 최초 실행 - .env 값이 있으면 그걸로 시드
-    cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 } };
+    cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 }, notifications: { ...DEFAULT_NOTIFICATIONS } };
     if (process.env.PROXMOX_HOST) {
       cfg.proxmoxServers.push({
         id: newId('pve'), name: 'Proxmox',
@@ -57,8 +62,9 @@ function loadConfig() {
     return;
   }
 
-  cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 }, ...parsed };
+  cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 }, notifications: { ...DEFAULT_NOTIFICATIONS }, ...parsed };
   cfg.settings = { refreshInterval: 15, ...(parsed.settings || {}) };
+  cfg.notifications = { ...DEFAULT_NOTIFICATIONS, ...(parsed.notifications || {}), events: { ...DEFAULT_NOTIFICATIONS.events, ...(parsed.notifications?.events || {}) } };
 
   // 구버전(단일 서버) 설정 마이그레이션
   if (parsed.proxmox && parsed.proxmox.host && cfg.proxmoxServers.length === 0) {
@@ -125,7 +131,12 @@ app.post('/api/login', (req, res) => {
   const user = cfg.users.find((u) => u.username === username);
   const ok = user && bcrypt.compareSync(password || '', user.passwordHash);
   logAccess({ ip: req.ip, username: username || '(빈 값)', success: !!ok });
-  if (!ok) return res.status(401).json({ ok: false, error: '아이디 또는 비밀번호가 올바르지 않습니다' });
+  if (!ok) {
+    if (cfg.notifications.events.loginFail) {
+      notify(`⚠️ 홈랩 대시보드 로그인 실패: 아이디 "${username || '(빈 값)'}", IP ${req.ip}`).catch(() => {});
+    }
+    return res.status(401).json({ ok: false, error: '아이디 또는 비밀번호가 올바르지 않습니다' });
+  }
   req.session.userId = user.id;
   req.session.username = user.username;
   res.json({ ok: true });
@@ -172,6 +183,97 @@ app.put('/api/users/:id/password', requireAuth, (req, res) => {
   saveConfig();
   res.json({ ok: true });
 });
+
+/* ------------------------------ 알림 (Discord / Telegram) ------------------------------ */
+
+async function sendDiscord(message) {
+  if (!cfg.notifications.discordWebhook) return;
+  await axios.post(cfg.notifications.discordWebhook, { content: message }, { timeout: 5000 });
+}
+
+async function sendTelegram(message) {
+  const { telegramBotToken, telegramChatId } = cfg.notifications;
+  if (!telegramBotToken || !telegramChatId) return;
+  await axios.post(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+    chat_id: telegramChatId, text: message,
+  }, { timeout: 5000 });
+}
+
+async function notify(message) {
+  await Promise.allSettled([sendDiscord(message), sendTelegram(message)]);
+}
+
+app.get('/api/notifications', (req, res) => {
+  const n = cfg.notifications;
+  res.json({
+    hasDiscordWebhook: !!n.discordWebhook,
+    hasTelegramBotToken: !!n.telegramBotToken,
+    telegramChatId: n.telegramChatId || '',
+    events: n.events,
+  });
+});
+
+app.put('/api/notifications', requireAuth, (req, res) => {
+  const { discordWebhook, telegramBotToken, telegramChatId, events } = req.body || {};
+  if (discordWebhook) cfg.notifications.discordWebhook = discordWebhook;
+  if (telegramBotToken) cfg.notifications.telegramBotToken = telegramBotToken;
+  if (telegramChatId !== undefined) cfg.notifications.telegramChatId = telegramChatId;
+  if (events) cfg.notifications.events = { ...cfg.notifications.events, ...events };
+  saveConfig();
+  res.json({ ok: true });
+});
+
+app.post('/api/notifications/test', requireAuth, async (req, res) => {
+  try {
+    await notify('🔔 홈랩 대시보드 알림 테스트입니다. 이 메시지가 보이면 정상 연결된 거예요!');
+    res.json({ ok: true });
+  } catch (err) {
+    res.json({ ok: false, error: err.response?.data?.description || err.message });
+  }
+});
+
+/* ------------------------------ 백그라운드 상태 감시 (알림용) ------------------------------ */
+// 브라우저를 안 열어놔도 서버 자체가 주기적으로 확인해서 다운/복구를 알려줍니다.
+
+const monitorState = {}; // key: 'pve:id' | 'syn:id' | 'tile:id' -> 'up' | 'down'
+
+async function checkAndNotify(key, isUp, upLabel, downLabel) {
+  const prev = monitorState[key];
+  const current = isUp ? 'up' : 'down';
+  monitorState[key] = current;
+  if (prev === undefined) return; // 서버 시작 직후 첫 체크는 알리지 않음 (기준점만 세움)
+  if (prev === current) return;
+  if (current === 'down' && cfg.notifications.events.serverDown) await notify(downLabel).catch(() => {});
+  if (current === 'up' && cfg.notifications.events.serverUp) await notify(upLabel).catch(() => {});
+}
+
+async function runMonitorCycle() {
+  await Promise.allSettled(cfg.proxmoxServers.map(async (s) => {
+    let ok = false;
+    try { await pveRequest(s, '/nodes'); ok = true; } catch { ok = false; }
+    await checkAndNotify(`pve:${s.id}`, ok, `✅ [Proxmox] ${s.name} 서버가 다시 연결되었습니다.`, `🔴 [Proxmox] ${s.name} 서버에 연결할 수 없습니다.`);
+  }));
+
+  await Promise.allSettled(cfg.synologyServers.map(async (s) => {
+    let ok = false;
+    try { await synLogin(s); ok = true; } catch { ok = false; }
+    await checkAndNotify(`syn:${s.id}`, ok, `✅ [Synology] ${s.name} 서버가 다시 연결되었습니다.`, `🔴 [Synology] ${s.name} 서버에 연결할 수 없습니다.`);
+  }));
+
+  const allTiles = cfg.groups.flatMap((g) => g.tiles || []);
+  await Promise.allSettled(allTiles.filter((t) => t.statusCheck !== false && t.url).map(async (t) => {
+    const status = await checkUp(t.url);
+    const key = `tile:${t.id}`;
+    const prev = monitorState[key];
+    monitorState[key] = status;
+    if (prev === undefined || prev === status) return;
+    if (status === 'down' && cfg.notifications.events.tileDown) await notify(`🔴 [바로가기] ${t.name}에 연결할 수 없습니다.`).catch(() => {});
+    if (status === 'up' && cfg.notifications.events.tileUp) await notify(`✅ [바로가기] ${t.name}가 다시 온라인입니다.`).catch(() => {});
+  }));
+}
+
+setInterval(() => { runMonitorCycle().catch(() => {}); }, 60 * 1000);
+setTimeout(() => { runMonitorCycle().catch(() => {}); }, 5000); // 시작 5초 후 첫 기준점 체크
 
 /* ------------------------------ 일반 설정 ------------------------------ */
 
@@ -227,6 +329,14 @@ app.post('/api/proxmox/servers', (req, res) => {
   res.json({ ok: true, server: maskPve(server) });
 });
 
+// :id 라우트보다 먼저 와야 "reorder"가 id로 잘못 매칭되지 않습니다
+app.put('/api/proxmox/servers/reorder', (req, res) => {
+  const order = req.body?.order || [];
+  cfg.proxmoxServers.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  saveConfig();
+  res.json({ ok: true });
+});
+
 app.put('/api/proxmox/servers/:id', (req, res) => {
   const s = findPve(req.params.id);
   if (!s) return res.status(404).json({ ok: false, error: '서버를 찾을 수 없습니다' });
@@ -252,6 +362,14 @@ app.post('/api/synology/servers', (req, res) => {
   cfg.synologyServers.push(server);
   saveConfig();
   res.json({ ok: true, server: maskSyn(server) });
+});
+
+// :id 라우트보다 먼저 와야 "reorder"가 id로 잘못 매칭되지 않습니다
+app.put('/api/synology/servers/reorder', (req, res) => {
+  const order = req.body?.order || [];
+  cfg.synologyServers.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  saveConfig();
+  res.json({ ok: true });
 });
 
 app.put('/api/synology/servers/:id', (req, res) => {
@@ -678,6 +796,31 @@ app.delete('/api/tiles/:id', (req, res) => {
     g.tiles = (g.tiles || []).filter((t) => t.id !== req.params.id);
     if (g.tiles.length !== before) { saveConfig(); return res.json({ ok: true }); }
   }
+  res.json({ ok: true });
+});
+
+// 타일을 다른 그룹으로 옮기기 (드래그앤드롭으로 그룹 간 이동)
+app.put('/api/tiles/:id/move', (req, res) => {
+  const { toGroupId, order } = req.body || {};
+  const targetGroup = cfg.groups.find((g) => g.id === toGroupId);
+  if (!targetGroup) return res.status(404).json({ ok: false, error: '대상 그룹을 찾을 수 없습니다' });
+
+  let tile = null;
+  for (const g of cfg.groups) {
+    const idx = (g.tiles || []).findIndex((t) => t.id === req.params.id);
+    if (idx !== -1) {
+      tile = g.tiles.splice(idx, 1)[0];
+      break;
+    }
+  }
+  if (!tile) return res.status(404).json({ ok: false, error: '타일을 찾을 수 없습니다' });
+
+  targetGroup.tiles = targetGroup.tiles || [];
+  targetGroup.tiles.push(tile);
+  if (Array.isArray(order)) {
+    targetGroup.tiles.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  }
+  saveConfig();
   res.json({ ok: true });
 });
 
