@@ -101,6 +101,8 @@
   .badge.qemu{ background:var(--proxmox-dim); color:var(--proxmox); }
   .badge.lxc{ background:#2c3a2c; color:#8bc98a; }
   .row-right{ display:flex; align-items:center; gap:8px; font-family:var(--mono); font-size:12px; color:var(--muted); flex-shrink:0; }
+  .usage-badge{ font-size:11px; color:var(--muted); white-space:nowrap; }
+  @media (max-width:480px){ .usage-badge{ display:none; } }
 
   .pill{
     font-size:11px; padding:3px 9px; border-radius:20px; font-weight:600;
@@ -225,6 +227,11 @@
   .add-group-btn:hover{ background:#262b34; }
   .group-card{ margin-bottom:16px; }
   .group-head{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .drag-handle{
+    cursor:grab; color:#4a4f5a; font-size:14px; line-height:1; user-select:none; flex-shrink:0;
+  }
+  .drag-handle:hover{ color:var(--muted); }
+  .drag-handle:active{ cursor:grabbing; }
   .group-head h3{ font-size:14px; margin:0; font-weight:600; color:var(--text); }
   .group-head .group-actions{ display:flex; gap:6px; margin-left:auto; }
   .icon-btn{
@@ -232,39 +239,46 @@
     border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center;
   }
   .icon-btn:hover{ color:var(--text); border-color:#3a4150; }
-  .tile-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; }
+  .tile-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:8px; }
   .tile{
-    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px;
+    background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:10px;
     position:relative; transition:border-color .15s;
   }
   .tile:hover{ border-color:#3a4150; }
-  .tile-top{ display:flex; align-items:flex-start; gap:10px; }
+  .tile-top{ display:flex; align-items:flex-start; gap:8px; }
   .tile-icon{
-    width:34px; height:34px; border-radius:8px; flex-shrink:0; display:flex; align-items:center;
-    justify-content:center; font-weight:700; font-size:14px; color:#fff; overflow:hidden;
+    width:28px; height:28px; border-radius:7px; flex-shrink:0; display:flex; align-items:center;
+    justify-content:center; font-weight:700; font-size:12px; color:#fff; overflow:hidden;
   }
   .tile-icon img{ width:100%; height:100%; object-fit:cover; }
   .tile-text{ min-width:0; flex:1; }
-  .tile-text a{ color:var(--text); text-decoration:none; font-size:13.5px; font-weight:600; display:block;
+  .tile-text a{ color:var(--text); text-decoration:none; font-size:13px; font-weight:600; display:block;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .tile-text .sub{ color:var(--muted); font-size:11.5px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .tile-status{ width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+  .tile-text .sub{ color:var(--muted); font-size:11px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tile-status{ width:7px; height:7px; border-radius:50%; flex-shrink:0; margin-top:5px; }
   .tile-status.up{ background:var(--ok); box-shadow:0 0 6px var(--ok); }
   .tile-status.down{ background:var(--bad); }
   .tile-status.unknown{ background:#4a4f5a; }
   .tile-edit-btn{
-    position:absolute; top:8px; right:8px; background:var(--panel-2); border:1px solid var(--line);
-    color:var(--muted); width:22px; height:22px; border-radius:6px; font-size:11px; cursor:pointer;
+    position:absolute; top:6px; right:6px; background:var(--panel-2); border:1px solid var(--line);
+    color:var(--muted); width:20px; height:20px; border-radius:5px; font-size:10px; cursor:pointer;
     display:none; align-items:center; justify-content:center;
   }
   .tile:hover .tile-edit-btn{ display:flex; }
-  .tile-stats{ display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; margin-top:12px; }
-  .tile-stat{ background:var(--panel-2); border-radius:6px; padding:7px 8px; }
-  .tile-stat .v{ font-family:var(--mono); font-size:13px; font-weight:600; }
-  .tile-stat .l{ font-size:9.5px; color:var(--muted); margin-top:1px; letter-spacing:.02em; }
+  .tile-drag-handle{
+    position:absolute; top:6px; left:6px; width:16px; height:16px; display:none;
+    align-items:center; justify-content:center; color:#4a4f5a; font-size:11px;
+    cursor:grab; user-select:none; background:var(--panel-2); border-radius:4px;
+  }
+  .tile:hover .tile-drag-handle{ display:flex; }
+  .tile-drag-handle:active{ cursor:grabbing; }
+  .tile-stats{ display:grid; grid-template-columns:repeat(2, 1fr); gap:5px; margin-top:8px; }
+  .tile-stat{ background:var(--panel-2); border-radius:6px; padding:6px 7px; }
+  .tile-stat .v{ font-family:var(--mono); font-size:12.5px; font-weight:600; }
+  .tile-stat .l{ font-size:9px; color:var(--muted); margin-top:1px; letter-spacing:.02em; }
   .add-tile-card{
-    border:1px dashed var(--line); border-radius:10px; display:flex; align-items:center;
-    justify-content:center; color:var(--muted); font-size:12.5px; cursor:pointer; min-height:66px;
+    border:1px dashed var(--line); border-radius:9px; display:flex; align-items:center;
+    justify-content:center; color:var(--muted); font-size:12px; cursor:pointer; min-height:48px;
     background:none; width:100%;
   }
   .add-tile-card:hover{ border-color:#3a4150; color:var(--text); }
@@ -311,7 +325,7 @@
 <header>
   <div>
     <h1>홈랩 대시보드</h1>
-    <div class="sub">Proxmox VE · Synology DSM</div>
+    <div class="sub">Proxmox VE · Synology DSM <span id="versionBadge" style="opacity:.6"></span></div>
   </div>
   <div class="controls">
     <span class="updated" id="updated">불러오는 중…</span>
@@ -610,13 +624,16 @@ function pveGuestsHtml(nodes) {
   nodes.forEach((n) => {
     (n.guests || []).forEach((g) => {
       const guestMemPct = g.maxmem ? g.mem / g.maxmem : 0;
+      const usage = g.status === 'running'
+        ? `<span class="usage-badge">CPU ${fmtPct(g.cpu || 0)}</span><span class="usage-badge">MEM ${fmtBytes(g.mem)}</span>`
+        : '';
       html += `
         <div class="row" data-toggle>
           <div class="row-left">
             <span class="badge ${g.type}">${g.type === 'qemu' ? 'VM' : 'LXC'}</span>
             <span class="name">${esc(g.name || ('#' + g.id))}</span>
           </div>
-          <div class="row-right">${pillFor(g.status)}</div>
+          <div class="row-right">${usage}${pillFor(g.status)}</div>
           <div class="detail">
             ID <code>${g.id}</code> · 노드 ${esc(n.node)} · CPU ${fmtPct(g.cpu || 0)} · 메모리 ${fmtBytes(g.mem)} / ${fmtBytes(g.maxmem)} (${fmtPct(guestMemPct)})
           </div>
@@ -1124,7 +1141,8 @@ function tileEl(tile) {
       ${stats.slice(0,4).map(s => `<div class="tile-stat"><div class="v">${esc(s.value)}</div><div class="l">${esc(s.label)}</div></div>`).join('')}
     </div>` : '';
   return `
-    <div class="tile">
+    <div class="tile" data-tile-id="${tile.id}">
+      <span class="tile-drag-handle" draggable="true" data-tile-drag="${tile.id}" data-tile-group="${tile.groupId}" title="드래그해서 순서 바꾸기">⠿</span>
       <button class="tile-edit-btn" data-edit-tile="${tile.id}" data-group="${tile.groupId}">✎</button>
       <a href="${esc(tile.url || '#')}" target="_blank" rel="noopener" class="tile-top" style="text-decoration:none">
         <div class="tile-icon" style="background:${tile.icon ? 'transparent' : colorFor(tile.name)}">${iconHtml}</div>
@@ -1147,8 +1165,9 @@ function renderGroups(groups) {
     return;
   }
   box.innerHTML = groups.map(g => `
-    <div class="group-card">
+    <div class="group-card" data-group-id="${g.id}">
       <div class="group-head">
+        <span class="drag-handle" draggable="true" data-group-drag="${g.id}" title="드래그해서 순서 바꾸기">⠿</span>
         <h3>${esc(g.name)}</h3>
         <div class="group-actions">
           <button class="icon-btn" data-edit-group="${g.id}" title="그룹 수정">✎</button>
@@ -1338,12 +1357,64 @@ document.addEventListener('click', (e) => {
 document.getElementById('groupModalOverlay').addEventListener('click', (e) => { if (e.target.id === 'groupModalOverlay') e.currentTarget.classList.remove('open'); });
 document.getElementById('tileModalOverlay').addEventListener('click', (e) => { if (e.target.id === 'tileModalOverlay') e.currentTarget.classList.remove('open'); });
 
+/* ---------------- 그룹/타일 드래그앤드롭 순서 변경 ---------------- */
+
+document.addEventListener('dragstart', (e) => {
+  const gh = e.target.closest('[data-group-drag]');
+  if (gh) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'group:' + gh.dataset.groupDrag); return; }
+  const th = e.target.closest('[data-tile-drag]');
+  if (th) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'tile:' + th.dataset.tileDrag + ':' + th.dataset.tileGroup); return; }
+});
+
+document.addEventListener('dragover', (e) => {
+  if (e.target.closest('[data-group-id]') || e.target.closest('[data-tile-id]')) e.preventDefault();
+});
+
+document.addEventListener('drop', async (e) => {
+  const data = e.dataTransfer.getData('text/plain');
+  if (!data) return;
+
+  if (data.startsWith('group:')) {
+    e.preventDefault();
+    const draggedId = data.slice('group:'.length);
+    const targetCard = e.target.closest('[data-group-id]');
+    if (!targetCard || targetCard.dataset.groupId === draggedId) return;
+    const from = groupsCache.findIndex(g => g.id === draggedId);
+    const to = groupsCache.findIndex(g => g.id === targetCard.dataset.groupId);
+    if (from === -1 || to === -1) return;
+    const [moved] = groupsCache.splice(from, 1);
+    groupsCache.splice(to, 0, moved);
+    renderGroups(groupsCache);
+    await api('/api/groups/reorder', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ order: groupsCache.map(g => g.id) }) });
+    return;
+  }
+
+  if (data.startsWith('tile:')) {
+    e.preventDefault();
+    const [, draggedId, groupId] = data.split(':');
+    const targetTile = e.target.closest('[data-tile-id]');
+    if (!targetTile || targetTile.dataset.tileId === draggedId) return;
+    const group = groupsCache.find(g => g.id === groupId);
+    if (!group) return;
+    const stillInSameGroup = (group.tiles || []).some(t => t.id === targetTile.dataset.tileId);
+    if (!stillInSameGroup) return; // 다른 그룹으로의 이동은 아직 지원하지 않습니다
+    const from = group.tiles.findIndex(t => t.id === draggedId);
+    const to = group.tiles.findIndex(t => t.id === targetTile.dataset.tileId);
+    if (from === -1 || to === -1) return;
+    const [moved] = group.tiles.splice(from, 1);
+    group.tiles.splice(to, 0, moved);
+    renderGroups(groupsCache);
+    await api(`/api/groups/${group.id}/tiles/reorder`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ order: group.tiles.map(t => t.id) }) });
+  }
+});
+
 loadGroups();
 setInterval(loadTileStatus, 20000);
 
 document.getElementById('refreshBtn').addEventListener('click', refresh);
 
 checkAuthStatus();
+api('/api/version').then(d => { document.getElementById('versionBadge').textContent = d.version ? `· v${d.version}` : ''; });
 loadGeneralSettings().then(() => { refresh(); scheduleRefresh(); });
 </script>
 </body>

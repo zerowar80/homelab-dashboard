@@ -107,6 +107,11 @@ function logAccess(entry) {
   saveConfig();
 }
 
+app.get('/api/version', (req, res) => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
+  res.json({ version: pkg.version });
+});
+
 app.get('/api/auth-status', (req, res) => {
   res.json({
     authEnabled: isAuthEnabled(),
@@ -582,6 +587,14 @@ app.post('/api/groups', (req, res) => {
   res.json({ ok: true, group });
 });
 
+// 그룹 카드 순서 바꾸기 (드래그앤드롭) - :id 라우트보다 먼저 와야 "reorder"가 id로 잘못 매칭되지 않습니다
+app.put('/api/groups/reorder', (req, res) => {
+  const order = req.body?.order || [];
+  cfg.groups.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  saveConfig();
+  res.json({ ok: true });
+});
+
 app.put('/api/groups/:id', (req, res) => {
   const group = cfg.groups.find((g) => g.id === req.params.id);
   if (!group) return res.status(404).json({ ok: false, error: '그룹을 찾을 수 없습니다' });
@@ -592,6 +605,16 @@ app.put('/api/groups/:id', (req, res) => {
 
 app.delete('/api/groups/:id', (req, res) => {
   cfg.groups = cfg.groups.filter((g) => g.id !== req.params.id);
+  saveConfig();
+  res.json({ ok: true });
+});
+
+// 같은 그룹 안 타일 순서 바꾸기 (드래그앤드롭)
+app.put('/api/groups/:id/tiles/reorder', (req, res) => {
+  const group = cfg.groups.find((g) => g.id === req.params.id);
+  if (!group) return res.status(404).json({ ok: false, error: '그룹을 찾을 수 없습니다' });
+  const order = req.body?.order || [];
+  group.tiles.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
   saveConfig();
   res.json({ ok: true });
 });
