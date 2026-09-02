@@ -31,6 +31,7 @@ const DEFAULT_SETTINGS = {
 };
 
 let cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { ...DEFAULT_SETTINGS }, notifications: { ...DEFAULT_NOTIFICATIONS } };
+let sseClients = []; // /api/stream 에 연결된 클라이언트들 (실시간 업데이트용)
 
 function newId(prefix) {
   return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -91,6 +92,7 @@ function loadConfig() {
 function saveConfig() {
   fs.mkdirSync(path.dirname(CONFIG_PATH), { recursive: true });
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2));
+  broadcastRefresh(); // 변경사항이 있을 때마다 연결된 모든 클라이언트에게 즉시 알림
 }
 
 loadConfig();
@@ -249,6 +251,7 @@ async function checkAndNotify(key, isUp, upLabel, downLabel) {
   monitorState[key] = current;
   if (prev === undefined) return; // 서버 시작 직후 첫 체크는 알리지 않음 (기준점만 세움)
   if (prev === current) return;
+  broadcastRefresh(); // 상태가 바뀌었으니 화면도 바로 갱신
   if (current === 'down' && cfg.notifications.events.serverDown) await notify(downLabel).catch(() => {});
   if (current === 'up' && cfg.notifications.events.serverUp) await notify(upLabel).catch(() => {});
 }
@@ -273,6 +276,7 @@ async function runMonitorCycle() {
     const prev = monitorState[key];
     monitorState[key] = status;
     if (prev === undefined || prev === status) return;
+    broadcastRefresh();
     if (status === 'down' && cfg.notifications.events.tileDown) await notify(`🔴 [바로가기] ${t.name}에 연결할 수 없습니다.`).catch(() => {});
     if (status === 'up' && cfg.notifications.events.tileUp) await notify(`✅ [바로가기] ${t.name}가 다시 온라인입니다.`).catch(() => {});
   }));
@@ -293,7 +297,40 @@ app.put('/api/settings', requireAuth, (req, res) => {
   if (title !== undefined) cfg.settings.title = title.trim() || DEFAULT_SETTINGS.title;
   if (subtitle !== undefined) cfg.settings.subtitle = subtitle.trim();
   saveConfig();
+  scheduleBroadcast();
   res.json({ ok: true, settings: cfg.settings });
+});
+
+/* ------------------------------ 실시간 업데이트 (Server-Sent Events) ------------------------------ */
+// Proxmox/Synology 자체엔 "변경 알림" 기능이 없어서 서버가 주기적으로 확인하는 건 동일하지만,
+// 브라우저가 각자 타이머로 물어보는 대신 서버가 준비되는 즉시 모든 접속자에게 동시에 밀어줍니다.
+
+let broadcastTimer = null;
+
+function broadcastRefresh() {
+  sseClients.forEach((res) => {
+    try { res.write('event: refresh\ndata: {}\n\n'); } catch { /* 끊긴 연결은 무시 */ }
+  });
+}
+
+function scheduleBroadcast() {
+  if (broadcastTimer) clearInterval(broadcastTimer);
+  const seconds = Math.max(5, cfg.settings.refreshInterval || 15);
+  broadcastTimer = setInterval(broadcastRefresh, seconds * 1000);
+}
+scheduleBroadcast();
+
+app.get('/api/stream', requireAuth, (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  res.write(': connected\n\n');
+  sseClients.push(res);
+  req.on('close', () => {
+    sseClients = sseClients.filter((c) => c !== res);
+  });
 });
 
 /* ------------------------------ 로그인 게이트 ------------------------------ */

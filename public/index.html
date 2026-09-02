@@ -37,6 +37,9 @@
   .controls{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .controls .updated{ font-size:11.5px; color:var(--muted); font-family:var(--mono); }
   .username-badge{ font-size:11.5px; color:var(--muted); }
+  .live-indicator{ display:flex; align-items:center; gap:5px; font-size:11px; color:#4a4f5a; }
+  .live-dot{ width:6px; height:6px; border-radius:50%; background:#4a4f5a; }
+  .live-dot.on{ background:var(--ok); box-shadow:0 0 5px var(--ok); }
   button.refresh{
     background:var(--panel-2); border:1px solid var(--line); color:var(--text);
     padding:7px 12px; border-radius:var(--radius); cursor:pointer;
@@ -50,10 +53,12 @@
     padding:16px; max-width:1400px; margin:0 auto;
     align-items:start;
   }
-  .zone{ max-width:640px; }
-  @media (max-width:900px){ .server-grid{ grid-template-columns:1fr; } .zone{ max-width:none; } }
+  @media (max-width:900px){ .server-grid{ grid-template-columns:1fr; } }
 
-  .zone{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .zone{
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
+    overflow:auto; resize:both; min-width:280px; min-height:140px;
+  }
   .zone-head{
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;
     padding:12px 14px; border-bottom:1px solid var(--line);
@@ -243,6 +248,7 @@
   .tile{
     background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:10px;
     position:relative; transition:border-color .15s;
+    overflow:auto; resize:both; min-width:150px; min-height:66px;
   }
   .tile:hover{ border-color:#3a4150; }
   .tile-top{ display:flex; align-items:flex-start; gap:8px; }
@@ -328,6 +334,7 @@
     <div class="sub"><span id="pageSubtitle">Proxmox VE · Synology DSM</span> <span id="versionBadge" style="opacity:.6"></span></div>
   </div>
   <div class="controls">
+    <span class="live-indicator" id="liveDotWrap"><span class="live-dot" id="liveDot"></span>실시간</span>
     <span class="updated" id="updated">불러오는 중…</span>
     <span class="username-badge" id="usernameBadge" style="display:none"></span>
     <button class="refresh" id="logoutBtn" style="display:none">로그아웃</button>
@@ -605,6 +612,38 @@ const fmtSynUptime = (v) => {
 const levelClass = (pct) => pct > 0.85 ? 'bad' : pct > 0.65 ? 'warn' : '';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
+/* ---------------- 카드/타일 크기 직접 조절 (드래그로 리사이즈, localStorage에 저장) ---------------- */
+
+const resizeObserved = new WeakSet();
+
+function resizeKeyFor(el) {
+  if (el.dataset.pveId) return 'size:pve:' + el.dataset.pveId;
+  if (el.dataset.synId) return 'size:syn:' + el.dataset.synId;
+  if (el.dataset.vmId) return 'size:vm:' + el.dataset.vmId;
+  if (el.dataset.tileId) return 'size:tile:' + el.dataset.tileId;
+  return null;
+}
+
+function initResizable(el) {
+  const key = resizeKeyFor(el);
+  if (!key) return;
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || 'null');
+    if (saved?.w) el.style.width = saved.w;
+    if (saved?.h) el.style.height = saved.h;
+  } catch {}
+  if (resizeObserved.has(el)) return;
+  resizeObserved.add(el);
+  const ro = new ResizeObserver(() => {
+    localStorage.setItem(key, JSON.stringify({ w: el.style.width, h: el.style.height }));
+  });
+  ro.observe(el);
+}
+
+function initAllResizables() {
+  document.querySelectorAll('[data-pve-id], [data-syn-id], [data-vm-id], [data-tile-id]').forEach(initResizable);
+}
+
 async function api(path, opts) {
   const r = await fetch(path, opts);
   if (r.status === 401) {
@@ -639,15 +678,25 @@ async function loadServers() {
   renderServerManagerLists();
 }
 
+let lastGridSignature = null;
+
 function renderServerGrid() {
   const grid = document.getElementById('serverGrid');
   if (pveServers.length === 0 && synServers.length === 0) {
     grid.innerHTML = `<div class="zone"><div class="empty">등록된 서버가 없습니다.</div><button class="notice-setup-btn" data-open-settings>⚙ 지금 서버 등록하기</button></div>`;
+    lastGridSignature = null;
     return;
   }
-  grid.innerHTML = pveServers.map(s => pveCardShell(s)).join('') + synServers.map(s => synCardShell(s)).join('');
+  // 서버 구성(개수/순서)이 안 바뀌었으면 카드 틀은 그대로 두고 내용만 새로 채웁니다.
+  // (매번 통째로 다시 그리면 실시간 업데이트마다 화면이 깜빡여서 "새로고침 느낌"이 납니다)
+  const signature = pveServers.map(s => 'p:' + s.id).join(',') + '|' + synServers.map(s => 's:' + s.id).join(',');
+  if (signature !== lastGridSignature) {
+    grid.innerHTML = pveServers.map(s => pveCardShell(s)).join('') + synServers.map(s => synCardShell(s)).join('');
+    lastGridSignature = signature;
+  }
   pveServers.forEach(loadPveZone);
   synServers.forEach(loadSynZone);
+  initAllResizables();
 }
 
 /* ---------------- Proxmox 카드 ---------------- */
@@ -775,13 +824,19 @@ function renderVmSection() {
     const data = pveDataCache[s.id];
     if (!data) return '';
     return `
-      <section class="zone">
-        <div class="zone-head"><div class="name">${esc(s.name)}</div></div>
+      <section class="zone" data-vm-id="${s.id}">
+        <div class="zone-head">
+          <div class="name">
+            <span class="drag-handle" draggable="true" data-pve-drag="${s.id}" title="드래그해서 순서 바꾸기">⠿</span>
+            ${esc(s.name)}
+          </div>
+        </div>
         <div class="subhead">가상머신 / 컨테이너</div>
         ${pveGuestsHtml(data.nodes)}
       </section>`;
   }).filter(Boolean).join('');
   box.innerHTML = cards || `<div class="empty" style="padding:16px 0;">등록된 Proxmox 서버가 없거나 아직 불러오는 중입니다.</div>`;
+  initAllResizables();
 }
 
 /* ---------------- Synology 카드 ---------------- */
@@ -1038,11 +1093,16 @@ document.getElementById('notifyTestBtn').addEventListener('click', async () => {
 /* ---------------- 일반 설정 (새로고침 주기) ---------------- */
 
 let refreshIntervalSec = 15;
-let refreshTimer = null;
+let eventSource = null;
 
-function scheduleRefresh() {
-  if (refreshTimer) clearInterval(refreshTimer);
-  refreshTimer = setInterval(refresh, refreshIntervalSec * 1000);
+// 서버가 준비되는 즉시 밀어주는 실시간 업데이트 (Server-Sent Events).
+// 연결이 끊기면 브라우저가 자동으로 재연결을 시도합니다.
+function connectRealtime() {
+  if (eventSource) eventSource.close();
+  eventSource = new EventSource('/api/stream');
+  eventSource.addEventListener('refresh', () => { refresh(); });
+  eventSource.onopen = () => { document.getElementById('liveDot').classList.add('on'); };
+  eventSource.onerror = () => { document.getElementById('liveDot').classList.remove('on'); };
 }
 
 async function loadGeneralSettings() {
@@ -1080,8 +1140,7 @@ document.getElementById('refreshIntervalInput').addEventListener('change', async
   const r = await api('/api/settings', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ refreshInterval: val }) });
   if (r.ok) {
     refreshIntervalSec = val;
-    scheduleRefresh();
-    msg.textContent = '저장했습니다.'; msg.className = 'modal-msg';
+    msg.textContent = '저장했습니다. (실시간 갱신 주기에도 바로 반영됩니다)'; msg.className = 'modal-msg';
   } else {
     msg.textContent = r.error || '저장 실패'; msg.className = 'modal-msg error';
   }
@@ -1338,6 +1397,7 @@ function renderGroups(groups) {
         <button class="add-tile-card" data-add-tile="${g.id}">+ 바로가기 추가</button>
       </div>
     </div>`).join('');
+  initAllResizables();
 }
 
 let groupsCache = [];
@@ -1532,7 +1592,7 @@ document.addEventListener('dragstart', (e) => {
 
 document.addEventListener('dragover', (e) => {
   if (e.target.closest('[data-group-id]') || e.target.closest('.tile-grid') ||
-      e.target.closest('[data-pve-id]') || e.target.closest('[data-syn-id]')) {
+      e.target.closest('[data-pve-id]') || e.target.closest('[data-syn-id]') || e.target.closest('[data-vm-id]')) {
     e.preventDefault();
   }
 });
@@ -1604,14 +1664,17 @@ document.addEventListener('drop', async (e) => {
   if (data.startsWith('pve:')) {
     e.preventDefault();
     const draggedId = data.slice('pve:'.length);
-    const targetCard = e.target.closest('[data-pve-id]');
-    if (!targetCard || targetCard.dataset.pveId === draggedId) return;
+    const targetCard = e.target.closest('[data-pve-id]') || e.target.closest('[data-vm-id]');
+    if (!targetCard) return;
+    const targetId = targetCard.dataset.pveId || targetCard.dataset.vmId;
+    if (targetId === draggedId) return;
     const from = pveServers.findIndex(s => s.id === draggedId);
-    const to = pveServers.findIndex(s => s.id === targetCard.dataset.pveId);
+    const to = pveServers.findIndex(s => s.id === targetId);
     if (from === -1 || to === -1) return;
     const [moved] = pveServers.splice(from, 1);
     pveServers.splice(to, 0, moved);
     renderServerGrid();
+    renderVmSection();
     await api('/api/proxmox/servers/reorder', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ order: pveServers.map(s => s.id) }) });
     return;
   }
@@ -1638,7 +1701,7 @@ document.getElementById('refreshBtn').addEventListener('click', refresh);
 
 checkAuthStatus();
 api('/api/version').then(d => { document.getElementById('versionBadge').textContent = d.version ? `· v${d.version}` : ''; });
-loadGeneralSettings().then(() => { refresh(); scheduleRefresh(); });
+loadGeneralSettings().then(() => { refresh(); connectRealtime(); });
 </script>
 </body>
 </html>
