@@ -867,7 +867,9 @@ function synStorageHtml(storage) {
   }).join('') + `</div>`;
 }
 
-function synDockerHtml(items) {
+function synDockerHtml(res) {
+  if (res.ok === false) return `<div class="subhead">Docker 컨테이너</div><div class="error-box">불러오기 실패: ${esc(res.error || '알 수 없는 오류')}</div>`;
+  const items = res.items || [];
   if (items.length === 0) return `<div class="subhead">Docker 컨테이너</div><div class="list"><div class="empty">컨테이너가 없습니다.</div></div>`;
   return `<div class="subhead">Docker 컨테이너</div><div class="list">` + items.map(c => `
     <div class="row" data-toggle>
@@ -877,7 +879,9 @@ function synDockerHtml(items) {
     </div>`).join('') + `</div>`;
 }
 
-function synSessionsHtml(items) {
+function synSessionsHtml(res) {
+  if (res.ok === false) return `<div class="subhead">로그인 세션</div><div class="error-box">불러오기 실패: ${esc(res.error || '알 수 없는 오류')}</div>`;
+  const items = res.items || [];
   if (items.length === 0) return `<div class="subhead">로그인 세션</div><div class="list"><div class="empty">현재 로그인된 세션이 없습니다.</div></div>`;
   return `<div class="subhead">로그인 세션</div><div class="list">` + items.map(it => `
     <div class="conn-row">
@@ -921,8 +925,8 @@ async function loadSynZone(server) {
       <div class="metric"><div class="label">가동 시간</div><div class="value" style="font-size:14px">${fmtSynUptime(info.up_time)}</div></div>
     </div>` +
     synStorageHtml(main.storage) +
-    synDockerHtml(docker.items || []) +
-    synSessionsHtml(sessions.items || []) +
+    synDockerHtml(docker) +
+    synSessionsHtml(sessions) +
     blocklistHtml(block.items || [], server.id, 'syn');
 }
 
