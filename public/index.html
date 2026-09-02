@@ -44,12 +44,12 @@
   }
   button.refresh:hover{ background:#262b34; }
   button.refresh:active{ transform:translateY(1px); }
-  main{
-    display:grid; grid-template-columns:1fr 1fr; gap:20px;
-    padding:24px 28px 48px; max-width:1400px; margin:0 auto;
+  .server-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(420px, 1fr)); gap:20px;
+    padding:24px 28px 40px; max-width:1400px; margin:0 auto;
     align-items:start;
   }
-  @media (max-width:900px){ main{ grid-template-columns:1fr; } }
+  @media (max-width:900px){ .server-grid{ grid-template-columns:1fr; } }
 
   .zone{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
   .zone-head{
@@ -158,6 +158,128 @@
     font-family:var(--mono); font-size:12px; border-radius:6px;
   }
   .blocked-item:hover{ background:var(--panel-2); }
+
+  /* 설정 모달 */
+  .modal-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.55);
+    align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .modal-overlay.open{ display:flex; }
+  .modal{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    width:100%; max-width:480px; max-height:86vh; display:flex; flex-direction:column; overflow:hidden;
+  }
+  .modal-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; border-bottom:1px solid var(--line);
+  }
+  .modal-head h2{ margin:0; font-size:16px; }
+  .modal-close{ background:none; border:none; color:var(--muted); font-size:16px; cursor:pointer; }
+  .modal-close:hover{ color:var(--text); }
+  .modal-body{ padding:18px 20px; overflow-y:auto; }
+  .modal-section{ margin-bottom:22px; }
+  .modal-section:last-child{ margin-bottom:0; }
+  .modal-section h3{
+    display:flex; align-items:center; gap:8px; font-size:13.5px; margin:0 0 12px;
+  }
+  .modal-dot{ width:8px; height:8px; border-radius:50%; }
+  .modal-body label{
+    display:block; font-size:12px; color:var(--muted); margin:10px 0 5px;
+  }
+  .modal-body label .hint{ color:#5c6373; }
+  .modal-body input, .modal-body select{
+    width:100%; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:9px 11px; border-radius:6px; font-size:13px; font-family:var(--mono); outline:none;
+  }
+  .modal-body input:focus, .modal-body select:focus{ border-color:#3a4150; }
+  .modal-msg{ font-size:12.5px; color:var(--ok); min-height:16px; }
+  .modal-msg.error{ color:var(--bad); }
+  .modal-foot{ padding:14px 20px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; }
+  .modal-save{
+    background:var(--synology); border:none; color:#0d1420; font-weight:600;
+    padding:9px 20px; border-radius:6px; font-size:13px; cursor:pointer;
+  }
+  .modal-save:hover{ opacity:.9; }
+  .notice-setup-btn{
+    margin:0 18px 14px; background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:7px 14px; border-radius:6px; font-size:12.5px; cursor:pointer;
+  }
+  .notice-setup-btn:hover{ background:#262b34; }
+
+  /* 서비스 바로가기 */
+  .shortcuts{ max-width:1400px; margin:0 auto; padding:0 28px 48px; }
+  .shortcuts-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .shortcuts-head h2{ font-size:15px; margin:0; font-weight:600; }
+  .add-group-btn{
+    background:var(--panel-2); border:1px solid var(--line); color:var(--text);
+    padding:7px 14px; border-radius:6px; font-size:12.5px; cursor:pointer;
+  }
+  .add-group-btn:hover{ background:#262b34; }
+  .group-card{ margin-bottom:22px; }
+  .group-head{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .group-head h3{ font-size:14px; margin:0; font-weight:600; color:var(--text); }
+  .group-head .group-actions{ display:flex; gap:6px; margin-left:auto; }
+  .icon-btn{
+    background:none; border:1px solid var(--line); color:var(--muted); width:26px; height:26px;
+    border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center;
+  }
+  .icon-btn:hover{ color:var(--text); border-color:#3a4150; }
+  .tile-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; }
+  .tile{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px;
+    position:relative; transition:border-color .15s;
+  }
+  .tile:hover{ border-color:#3a4150; }
+  .tile-top{ display:flex; align-items:flex-start; gap:10px; }
+  .tile-icon{
+    width:34px; height:34px; border-radius:8px; flex-shrink:0; display:flex; align-items:center;
+    justify-content:center; font-weight:700; font-size:14px; color:#fff; overflow:hidden;
+  }
+  .tile-icon img{ width:100%; height:100%; object-fit:cover; }
+  .tile-text{ min-width:0; flex:1; }
+  .tile-text a{ color:var(--text); text-decoration:none; font-size:13.5px; font-weight:600; display:block;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tile-text .sub{ color:var(--muted); font-size:11.5px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .tile-status{ width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+  .tile-status.up{ background:var(--ok); box-shadow:0 0 6px var(--ok); }
+  .tile-status.down{ background:var(--bad); }
+  .tile-status.unknown{ background:#4a4f5a; }
+  .tile-edit-btn{
+    position:absolute; top:8px; right:8px; background:var(--panel-2); border:1px solid var(--line);
+    color:var(--muted); width:22px; height:22px; border-radius:6px; font-size:11px; cursor:pointer;
+    display:none; align-items:center; justify-content:center;
+  }
+  .tile:hover .tile-edit-btn{ display:flex; }
+  .tile-stats{ display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; margin-top:12px; }
+  .tile-stat{ background:var(--panel-2); border-radius:6px; padding:7px 8px; }
+  .tile-stat .v{ font-family:var(--mono); font-size:13px; font-weight:600; }
+  .tile-stat .l{ font-size:9.5px; color:var(--muted); margin-top:1px; letter-spacing:.02em; }
+  .add-tile-card{
+    border:1px dashed var(--line); border-radius:10px; display:flex; align-items:center;
+    justify-content:center; color:var(--muted); font-size:12.5px; cursor:pointer; min-height:66px;
+    background:none; width:100%;
+  }
+  .add-tile-card:hover{ border-color:#3a4150; color:var(--text); }
+  .modal-danger{
+    background:none; border:1px solid #4a2d33; color:#e08b91; font-size:12.5px;
+    padding:8px 14px; border-radius:6px; cursor:pointer; margin-right:auto;
+  }
+  .modal-danger:hover{ background:#2a1c1f; }
+  .modal-foot{ gap:8px; }
+  .checkbox-row{ display:flex; align-items:center; gap:8px; margin-top:12px; }
+  .checkbox-row input{ width:auto; }
+  .checkbox-row label{ margin:0; }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .widget-fields{ margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); }
+  .custom-field-row{ display:grid; grid-template-columns:1fr 1fr auto; gap:6px; margin-top:6px; align-items:center; }
+
+  /* 서버 관리 */
+  .server-list-item{
+    display:flex; align-items:center; justify-content:space-between; padding:9px 10px;
+    border-radius:6px; font-size:13px; cursor:pointer;
+  }
+  .server-list-item:hover{ background:var(--panel-2); }
+  .server-list-item .host{ color:var(--muted); font-family:var(--mono); font-size:11.5px; }
 </style>
 </head>
 <body>
@@ -169,62 +291,152 @@
   </div>
   <div class="controls">
     <span class="updated" id="updated">불러오는 중…</span>
+    <button class="refresh" id="settingsBtn">⚙ 설정</button>
     <button class="refresh" id="refreshBtn">↻ 새로고침</button>
   </div>
 </header>
 
-<main>
-  <section class="zone" id="proxmoxZone">
-    <div class="zone-head">
-      <div class="name"><span class="dot off" id="pveDot"></span>Proxmox</div>
-      <a class="open-link" id="pveLink" href="#" target="_blank" rel="noopener">웹 UI 열기 ↗</a>
+<main class="server-grid" id="serverGrid"></main>
+
+<div class="shortcuts">
+  <div class="shortcuts-head">
+    <h2>서비스 바로가기</h2>
+    <button class="add-group-btn" id="addGroupBtn">+ 그룹 추가</button>
+  </div>
+  <div id="groupsContainer"></div>
+</div>
+
+<!-- 그룹 추가/수정 모달 -->
+<div class="modal-overlay" id="groupModalOverlay">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-head">
+      <h2 id="groupModalTitle">그룹 추가</h2>
+      <button class="modal-close" data-close="groupModalOverlay">✕</button>
     </div>
-    <div id="pveNotice"></div>
-    <div id="pveContent" style="display:none">
-      <div class="metrics" id="pveMetrics"></div>
+    <div class="modal-body">
+      <label>그룹 이름</label>
+      <input type="text" id="groupNameInput" placeholder="예: 핵심 관리">
+      <div class="modal-msg" id="groupModalMsg"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-danger" id="groupDeleteBtn" style="display:none">그룹 삭제</button>
+      <button class="modal-save" id="groupSaveBtn">저장</button>
+    </div>
+  </div>
+</div>
 
-      <div class="subhead">가상머신 / 컨테이너</div>
-      <div class="list" id="pveGuests"></div>
-
-      <div class="subhead">최근 접속 시도 <span class="hint" id="pveConnHint"></span></div>
-      <div class="list" id="pveConnections"></div>
-
-      <div class="subhead">차단 목록</div>
-      <div class="block-input-row">
-        <input type="text" id="pveBlockInput" placeholder="IP 또는 CIDR (예: 1.2.3.4)">
-        <button id="pveBlockBtn">차단</button>
+<!-- 타일 추가/수정 모달 -->
+<div class="modal-overlay" id="tileModalOverlay">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head">
+      <h2 id="tileModalTitle">바로가기 추가</h2>
+      <button class="modal-close" data-close="tileModalOverlay">✕</button>
+    </div>
+    <div class="modal-body">
+      <label>이름</label>
+      <input type="text" id="tileName" placeholder="예: Immich">
+      <label>부제 <span class="hint">(선택)</span></label>
+      <input type="text" id="tileSubtitle" placeholder="예: 사진 백업">
+      <label>URL <span class="hint">(클릭하면 이동)</span></label>
+      <input type="text" id="tileUrl" placeholder="https://...">
+      <label>아이콘 이미지 URL <span class="hint">(비우면 이니셜로 표시)</span></label>
+      <input type="text" id="tileIcon" placeholder="https://.../icon.png">
+      <div class="checkbox-row">
+        <input type="checkbox" id="tileStatusCheck" checked>
+        <label for="tileStatusCheck">온라인 상태 확인 (URL로 접속해봄)</label>
       </div>
-      <div class="blocked-list" id="pveBlockedList"></div>
-    </div>
-  </section>
 
-  <section class="zone" id="synologyZone">
-    <div class="zone-head">
-      <div class="name"><span class="dot off" id="synDot"></span>Synology</div>
-      <a class="open-link" id="synLink" href="#" target="_blank" rel="noopener">웹 UI 열기 ↗</a>
-    </div>
-    <div id="synNotice"></div>
-    <div id="synContent" style="display:none">
-      <div class="metrics" id="synMetrics"></div>
+      <label style="margin-top:14px">통계 위젯</label>
+      <select id="tileWidget">
+        <option value="none">없음 (링크만)</option>
+        <option value="portainer">Portainer (컨테이너 실행 현황)</option>
+        <option value="custom_json">커스텀 JSON API</option>
+      </select>
 
-      <div class="subhead">스토리지</div>
-      <div class="storage-list" id="synStorage"></div>
-
-      <div class="subhead">Docker 컨테이너 <span class="hint" id="synDockerHint"></span></div>
-      <div class="list" id="synDocker"></div>
-
-      <div class="subhead">로그인 세션</div>
-      <div class="list" id="synSessions"></div>
-
-      <div class="subhead">차단 목록</div>
-      <div class="block-input-row">
-        <input type="text" id="synBlockInput" placeholder="IP 입력 (예: 1.2.3.4)">
-        <button id="synBlockBtn">차단</button>
+      <div class="widget-fields" id="portainerFields" style="display:none">
+        <label>Portainer 주소</label>
+        <input type="text" id="pfHost" placeholder="https://portainer:9443">
+        <label>API Key</label>
+        <input type="password" id="pfApiKey" placeholder="변경하려면 입력">
       </div>
-      <div class="blocked-list" id="synBlockedList"></div>
+
+      <div class="widget-fields" id="customJsonFields" style="display:none">
+        <label>API 엔드포인트</label>
+        <input type="text" id="cjEndpoint" placeholder="https://.../api/stats">
+        <div class="field-row">
+          <div><label>헤더 이름 <span class="hint">(선택)</span></label><input type="text" id="cjHeaderName" placeholder="x-api-key"></div>
+          <div><label>헤더 값</label><input type="password" id="cjHeaderValue" placeholder="변경하려면 입력"></div>
+        </div>
+        <label style="margin-top:10px">표시할 값 <span class="hint">(최대 4개, 점 표기법)</span></label>
+        <div id="cjFieldsList"></div>
+        <button class="add-tile-card" id="cjAddFieldBtn" style="margin-top:8px; min-height:36px;">+ 값 추가</button>
+      </div>
+
+      <div class="modal-msg" id="tileModalMsg"></div>
     </div>
-  </section>
-</main>
+    <div class="modal-foot">
+      <button class="modal-danger" id="tileDeleteBtn" style="display:none">삭제</button>
+      <button class="modal-save" id="tileSaveBtn">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 서버 관리 모달 -->
+<div class="modal-overlay" id="settingsOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>서버 관리</h2>
+      <button class="modal-close" data-close="settingsOverlay">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <h3><span class="modal-dot" style="background:var(--proxmox)"></span>Proxmox</h3>
+        <div id="pveServerList"></div>
+        <button class="add-tile-card" id="addPveServerBtn" style="margin-top:8px; min-height:40px;">+ Proxmox 서버 추가</button>
+      </div>
+      <div class="modal-section">
+        <h3><span class="modal-dot" style="background:var(--synology)"></span>Synology</h3>
+        <div id="synServerList"></div>
+        <button class="add-tile-card" id="addSynServerBtn" style="margin-top:8px; min-height:40px;">+ Synology 서버 추가</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 서버 추가/수정 폼 모달 -->
+<div class="modal-overlay" id="serverFormOverlay">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head">
+      <h2 id="serverFormTitle">Proxmox 서버 추가</h2>
+      <button class="modal-close" data-close="serverFormOverlay">✕</button>
+    </div>
+    <div class="modal-body">
+      <label>표시 이름</label>
+      <input type="text" id="sfName" placeholder="예: 거실 Proxmox">
+      <label>호스트 주소</label>
+      <input type="text" id="sfHost" placeholder="https://192.168.1.10:8006">
+
+      <div id="sfPveFields">
+        <label>API 토큰 ID</label>
+        <input type="text" id="sfTokenId" placeholder="root@pam!dashboard">
+        <label>API 토큰 Secret</label>
+        <input type="password" id="sfTokenSecret" placeholder="변경하려면 입력">
+      </div>
+      <div id="sfSynFields">
+        <label>계정</label>
+        <input type="text" id="sfUser" placeholder="dashboard-readonly">
+        <label>비밀번호</label>
+        <input type="password" id="sfPassword" placeholder="변경하려면 입력">
+      </div>
+
+      <div class="modal-msg" id="serverFormMsg"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="modal-danger" id="serverDeleteBtn" style="display:none">삭제</button>
+      <button class="modal-save" id="serverSaveBtn">저장</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const fmtBytes = (b) => {
@@ -240,11 +452,6 @@ const fmtUptime = (s) => {
   const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
   return d > 0 ? `${d}일 ${h}시간` : `${h}시간`;
 };
-const fmtTime = (t) => {
-  if (!t) return '-';
-  const ms = t > 1e12 ? t : t * 1000;
-  return new Date(ms).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
-};
 const levelClass = (pct) => pct > 0.85 ? 'bad' : pct > 0.65 ? 'warn' : '';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
@@ -253,19 +460,73 @@ async function api(path, opts) {
   return r.json();
 }
 
-/* ---------------- Proxmox ---------------- */
-
 function pillFor(status) {
   if (status === 'running') return `<span class="pill on">실행 중</span>`;
   if (status === 'paused') return `<span class="pill paused">일시정지</span>`;
   return `<span class="pill off">중지됨</span>`;
 }
+function dockerPillFor(status) {
+  const s = (status || '').toLowerCase();
+  if (s.includes('run')) return `<span class="pill on">실행 중</span>`;
+  if (s.includes('pause')) return `<span class="pill paused">일시정지</span>`;
+  return `<span class="pill off">중지됨</span>`;
+}
 
-function renderProxmoxGuests(nodes) {
+/* ==================== 서버 목록 (Proxmox / Synology, 여러 대) ==================== */
+
+let pveServers = [];
+let synServers = [];
+
+async function loadServers() {
+  const data = await api('/api/servers');
+  pveServers = data.proxmox || [];
+  synServers = data.synology || [];
+  renderServerGrid();
+  renderServerManagerLists();
+}
+
+function renderServerGrid() {
+  const grid = document.getElementById('serverGrid');
+  if (pveServers.length === 0 && synServers.length === 0) {
+    grid.innerHTML = `<div class="zone"><div class="empty">등록된 서버가 없습니다.</div><button class="notice-setup-btn" data-open-settings>⚙ 지금 서버 등록하기</button></div>`;
+    return;
+  }
+  grid.innerHTML = pveServers.map(s => pveCardShell(s)).join('') + synServers.map(s => synCardShell(s)).join('');
+  pveServers.forEach(loadPveZone);
+  synServers.forEach(loadSynZone);
+}
+
+/* ---------------- Proxmox 카드 ---------------- */
+
+function pveCardShell(server) {
+  return `
+    <section class="zone" data-pve-id="${server.id}">
+      <div class="zone-head">
+        <div class="name"><span class="dot off" data-role="dot"></span>${esc(server.name)}</div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <a class="open-link" href="${esc(server.host)}" target="_blank" rel="noopener">웹 UI 열기 ↗</a>
+          <button class="icon-btn" data-edit-server="pve:${server.id}" title="서버 설정">⚙</button>
+        </div>
+      </div>
+      <div data-role="body"><div class="empty">불러오는 중…</div></div>
+    </section>`;
+}
+
+function pveMetricsHtml(nodes) {
+  return `<div class="metrics">` + nodes.map((n) => {
+    const cpuPct = n.cpu, memPct = n.mem / n.maxmem, diskPct = n.disk / n.maxdisk;
+    return `
+      <div class="metric"><div class="label">${esc(n.node)} · CPU</div><div class="value ${levelClass(cpuPct)}">${fmtPct(cpuPct)}</div></div>
+      <div class="metric"><div class="label">메모리</div><div class="value ${levelClass(memPct)}">${fmtPct(memPct)}</div></div>
+      <div class="metric"><div class="label">디스크</div><div class="value ${levelClass(diskPct)}">${fmtPct(diskPct)}</div></div>
+      <div class="metric"><div class="label">가동 시간</div><div class="value">${fmtUptime(n.uptime)}</div></div>`;
+  }).join('') + `</div>`;
+}
+
+function pveGuestsHtml(nodes) {
   let html = '';
   nodes.forEach((n) => {
-    if (n.guests.length === 0) return;
-    n.guests.forEach((g) => {
+    (n.guests || []).forEach((g) => {
       const guestMemPct = g.maxmem ? g.mem / g.maxmem : 0;
       html += `
         <div class="row" data-toggle>
@@ -280,260 +541,565 @@ function renderProxmoxGuests(nodes) {
         </div>`;
     });
   });
-  document.getElementById('pveGuests').innerHTML = html || `<div class="empty">VM / 컨테이너가 없습니다.</div>`;
+  return `<div class="list">${html || `<div class="empty">VM / 컨테이너가 없습니다.</div>`}</div>`;
 }
 
-function renderProxmoxMetrics(nodes) {
-  let html = '';
-  nodes.forEach((n) => {
-    const cpuPct = n.cpu, memPct = n.mem / n.maxmem, diskPct = n.disk / n.maxdisk;
-    html += `
-      <div class="metric"><div class="label">${esc(n.node)} · CPU</div><div class="value ${levelClass(cpuPct)}">${fmtPct(cpuPct)}</div></div>
-      <div class="metric"><div class="label">메모리</div><div class="value ${levelClass(memPct)}">${fmtPct(memPct)}</div></div>
-      <div class="metric"><div class="label">디스크</div><div class="value ${levelClass(diskPct)}">${fmtPct(diskPct)}</div></div>
-      <div class="metric"><div class="label">가동 시간</div><div class="value">${fmtUptime(n.uptime)}</div></div>`;
-  });
-  document.getElementById('pveMetrics').innerHTML = html;
+function connectionsHtml(items, serverId) {
+  if (items.length === 0) {
+    return `<div class="subhead">최근 접속 시도 <span class="hint">(방화벽 로깅이 꺼져 있으면 비어 있습니다)</span></div>
+      <div class="list"><div class="empty">기록된 접속 시도가 없습니다.</div></div>`;
+  }
+  return `<div class="subhead">최근 접속 시도</div>
+    <div class="list">${items.map(it => `
+      <div class="conn-row">
+        <div class="conn-left">
+          <span class="action-badge ${it.action}">${it.action}</span>
+          <span class="ip">${esc(it.ip)}</span>
+          ${it.port ? `<span class="who">:${esc(it.port)}</span>` : ''}
+        </div>
+        <button class="btn-block" data-block-ip="${esc(it.ip)}" data-target="pve" data-server="${serverId}">차단</button>
+      </div>`).join('')}</div>`;
 }
 
-async function loadProxmoxConnections() {
-  const data = await api('/api/proxmox/connections');
-  const hint = document.getElementById('pveConnHint');
-  const box = document.getElementById('pveConnections');
-  if (!data.ok) { box.innerHTML = `<div class="empty">불러올 수 없습니다.</div>`; return; }
-  if (data.items.length === 0) {
-    hint.textContent = '(방화벽 로깅이 꺼져 있으면 비어 있습니다)';
-    box.innerHTML = `<div class="empty">기록된 접속 시도가 없습니다.</div>`;
+function blocklistHtml(items, serverId, target) {
+  const rows = items.length
+    ? items.map(it => `
+      <div class="blocked-item">
+        <span>${esc(it.cidr || it.ip)}</span>
+        <button class="btn-unblock" data-unblock-ip="${esc(it.cidr || it.ip)}" data-target="${target}" data-server="${serverId}">해제</button>
+      </div>`).join('')
+    : `<div class="empty" style="padding:6px 10px;">차단된 IP가 없습니다.</div>`;
+  return `<div class="subhead">차단 목록</div>
+    <div class="block-input-row">
+      <input type="text" data-block-input="${target}" data-server="${serverId}" placeholder="${target === 'pve' ? 'IP 또는 CIDR' : 'IP'} (예: 1.2.3.4)">
+      <button data-block-submit="${target}" data-server="${serverId}">차단</button>
+    </div>
+    <div class="blocked-list">${rows}</div>`;
+}
+
+async function loadPveZone(server) {
+  const card = document.querySelector(`[data-pve-id="${server.id}"]`);
+  if (!card) return;
+  const dot = card.querySelector('[data-role="dot"]');
+  const body = card.querySelector('[data-role="body"]');
+
+  const main = await api(`/api/proxmox/${server.id}`);
+  if (!main.ok) {
+    dot.className = 'dot bad';
+    body.innerHTML = `<div class="error-box">연결 실패: ${esc(main.error)}</div>`;
     return;
   }
-  hint.textContent = '';
-  box.innerHTML = data.items.map(it => `
-    <div class="conn-row">
-      <div class="conn-left">
-        <span class="action-badge ${it.action}">${it.action}</span>
-        <span class="ip">${esc(it.ip)}</span>
-        ${it.port ? `<span class="who">:${esc(it.port)}</span>` : ''}
+  dot.className = 'dot ok';
+
+  const [conn, block] = await Promise.all([
+    api(`/api/proxmox/${server.id}/connections`),
+    api(`/api/proxmox/${server.id}/blocklist`),
+  ]);
+
+  body.innerHTML =
+    pveMetricsHtml(main.nodes) +
+    `<div class="subhead">가상머신 / 컨테이너</div>` +
+    pveGuestsHtml(main.nodes) +
+    connectionsHtml(conn.items || [], server.id) +
+    blocklistHtml(block.items || [], server.id, 'pve');
+}
+
+/* ---------------- Synology 카드 ---------------- */
+
+function synCardShell(server) {
+  return `
+    <section class="zone" data-syn-id="${server.id}">
+      <div class="zone-head">
+        <div class="name"><span class="dot off" data-role="dot"></span>${esc(server.name)}</div>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <a class="open-link" href="${esc(server.host)}" target="_blank" rel="noopener">웹 UI 열기 ↗</a>
+          <button class="icon-btn" data-edit-server="syn:${server.id}" title="서버 설정">⚙</button>
+        </div>
       </div>
-      <button class="btn-block" data-block-ip="${esc(it.ip)}" data-target="pve">차단</button>
-    </div>`).join('');
+      <div data-role="body"><div class="empty">불러오는 중…</div></div>
+    </section>`;
 }
 
-async function loadProxmoxBlocklist() {
-  const data = await api('/api/proxmox/blocklist');
-  const box = document.getElementById('pveBlockedList');
-  if (!data.ok || data.items.length === 0) {
-    box.innerHTML = `<div class="empty" style="padding:6px 10px;">차단된 IP가 없습니다.</div>`;
-    return;
-  }
-  box.innerHTML = data.items.map(it => `
-    <div class="blocked-item">
-      <span>${esc(it.cidr)}</span>
-      <button class="btn-unblock" data-unblock-ip="${esc(it.cidr)}" data-target="pve">해제</button>
-    </div>`).join('');
+function synStorageHtml(storage) {
+  const volumes = (storage && storage.volumes) || [];
+  if (volumes.length === 0) return `<div class="subhead">스토리지</div><div class="empty">볼륨 정보를 가져오지 못했습니다.</div>`;
+  return `<div class="subhead">스토리지</div><div class="storage-list">` + volumes.map((v) => {
+    const total = parseInt(v.size?.total || 0, 10);
+    const used = parseInt(v.size?.used || 0, 10);
+    const pct = total ? used / total : 0;
+    return `
+      <div class="vol">
+        <div class="vol-top"><span>${esc(v.display_name || v.id)}</span><span>${fmtBytes(used)} / ${fmtBytes(total)}</span></div>
+        <div class="bar"><div class="bar-fill" style="width:${(pct*100).toFixed(0)}%; background:${pct>0.85?'var(--bad)':pct>0.65?'var(--warn)':'var(--synology)'}"></div></div>
+      </div>`;
+  }).join('') + `</div>`;
 }
 
-async function renderProxmox(data) {
-  const dot = document.getElementById('pveDot');
-  const link = document.getElementById('pveLink');
-  const notice = document.getElementById('pveNotice');
-  const content = document.getElementById('pveContent');
-
-  link.href = data.host || '#';
-  if (!data.configured) {
-    dot.className = 'dot off'; content.style.display = 'none';
-    notice.innerHTML = `<div class="empty">아직 설정되지 않았습니다. <code>.env</code>에 <code>PROXMOX_HOST</code>, <code>PROXMOX_TOKEN_ID</code>, <code>PROXMOX_TOKEN_SECRET</code>을 입력하세요.</div>`;
-    return;
-  }
-  if (!data.ok) {
-    dot.className = 'dot bad'; content.style.display = 'none';
-    notice.innerHTML = `<div class="error-box">연결 실패: ${esc(data.error)}</div>`;
-    return;
-  }
-  dot.className = 'dot ok'; notice.innerHTML = ''; content.style.display = 'block';
-  renderProxmoxMetrics(data.nodes);
-  renderProxmoxGuests(data.nodes);
-  await Promise.all([loadProxmoxConnections(), loadProxmoxBlocklist()]);
-}
-
-/* ---------------- Synology ---------------- */
-
-function dockerPillFor(status) {
-  const s = (status || '').toLowerCase();
-  if (s.includes('run')) return `<span class="pill on">실행 중</span>`;
-  if (s.includes('pause')) return `<span class="pill paused">일시정지</span>`;
-  return `<span class="pill off">중지됨</span>`;
-}
-
-async function loadSynDocker() {
-  const data = await api('/api/synology/docker');
-  const box = document.getElementById('synDocker');
-  const hint = document.getElementById('synDockerHint');
-  if (!data.ok) {
-    hint.textContent = '';
-    box.innerHTML = `<div class="empty">불러올 수 없습니다: ${esc(data.error || '')}</div>`;
-    return;
-  }
-  hint.textContent = '';
-  if (data.items.length === 0) {
-    box.innerHTML = `<div class="empty">컨테이너가 없습니다.</div>`;
-    return;
-  }
-  box.innerHTML = data.items.map(c => `
+function synDockerHtml(items) {
+  if (items.length === 0) return `<div class="subhead">Docker 컨테이너</div><div class="list"><div class="empty">컨테이너가 없습니다.</div></div>`;
+  return `<div class="subhead">Docker 컨테이너</div><div class="list">` + items.map(c => `
     <div class="row" data-toggle>
-      <div class="row-left">
-        <span class="name">${esc(c.name || c.id)}</span>
-      </div>
+      <div class="row-left"><span class="name">${esc(c.name || c.id)}</span></div>
       <div class="row-right">${dockerPillFor(c.status)}</div>
       <div class="detail">이미지 <code>${esc(c.image || '-')}</code></div>
-    </div>`).join('');
+    </div>`).join('') + `</div>`;
 }
 
-async function loadSynSessions() {
-  const data = await api('/api/synology/sessions');
-  const box = document.getElementById('synSessions');
-  if (!data.ok) {
-    box.innerHTML = `<div class="empty">불러올 수 없습니다: ${esc(data.error || '')}</div>`;
-    return;
-  }
-  if (data.items.length === 0) {
-    box.innerHTML = `<div class="empty">현재 로그인된 세션이 없습니다.</div>`;
-    return;
-  }
-  box.innerHTML = data.items.map(it => `
+function synSessionsHtml(items) {
+  if (items.length === 0) return `<div class="subhead">로그인 세션</div><div class="list"><div class="empty">현재 로그인된 세션이 없습니다.</div></div>`;
+  return `<div class="subhead">로그인 세션</div><div class="list">` + items.map(it => `
     <div class="conn-row">
       <div class="conn-left">
         <span class="who">${esc(it.name || it.account || '-')}</span>
         <span class="ip">${esc(it.ip || '-')}</span>
       </div>
-      <button class="btn-block" data-block-ip="${esc(it.ip)}" data-target="syn">차단</button>
-    </div>`).join('');
+    </div>`).join('') + `</div>`;
 }
 
-async function loadSynBlocklist() {
-  const data = await api('/api/synology/blocklist');
-  const box = document.getElementById('synBlockedList');
-  if (!data.ok || data.items.length === 0) {
-    box.innerHTML = `<div class="empty" style="padding:6px 10px;">차단된 IP가 없습니다.</div>`;
+async function loadSynZone(server) {
+  const card = document.querySelector(`[data-syn-id="${server.id}"]`);
+  if (!card) return;
+  const dot = card.querySelector('[data-role="dot"]');
+  const body = card.querySelector('[data-role="body"]');
+
+  const main = await api(`/api/synology/${server.id}`);
+  if (!main.ok) {
+    dot.className = 'dot bad';
+    body.innerHTML = `<div class="error-box">연결 실패: ${esc(main.error)}</div>`;
     return;
   }
-  box.innerHTML = data.items.map(it => `
-    <div class="blocked-item">
-      <span>${esc(it.ip || it.cidr)}</span>
-      <button class="btn-unblock" data-unblock-ip="${esc(it.ip || it.cidr)}" data-target="syn">해제</button>
-    </div>`).join('');
-}
+  dot.className = 'dot ok';
 
-async function renderSynology(data) {
-  const dot = document.getElementById('synDot');
-  const link = document.getElementById('synLink');
-  const notice = document.getElementById('synNotice');
-  const content = document.getElementById('synContent');
+  const [docker, sessions, block] = await Promise.all([
+    api(`/api/synology/${server.id}/docker`),
+    api(`/api/synology/${server.id}/sessions`),
+    api(`/api/synology/${server.id}/blocklist`),
+  ]);
 
-  link.href = data.host || '#';
-  if (!data.configured) {
-    dot.className = 'dot off'; content.style.display = 'none';
-    notice.innerHTML = `<div class="empty">아직 설정되지 않았습니다. <code>.env</code>에 <code>SYNOLOGY_HOST</code>, <code>SYNOLOGY_USER</code>, <code>SYNOLOGY_PASSWORD</code>를 입력하세요.</div>`;
-    return;
-  }
-  if (!data.ok) {
-    dot.className = 'dot bad'; content.style.display = 'none';
-    notice.innerHTML = `<div class="error-box">연결 실패: ${esc(data.error)}</div>`;
-    return;
-  }
-  dot.className = 'dot ok'; notice.innerHTML = ''; content.style.display = 'block';
-
-  const u = data.utilization || {};
+  const u = main.utilization || {};
   const cpuPct = u.cpu ? (u.cpu.user_load + u.cpu.system_load) / 100 : 0;
   const memPct = u.memory ? u.memory.real_usage / 100 : 0;
-  const info = data.info || {};
-  document.getElementById('synMetrics').innerHTML = `
-    <div class="metric"><div class="label">CPU</div><div class="value ${levelClass(cpuPct)}">${fmtPct(cpuPct)}</div></div>
-    <div class="metric"><div class="label">메모리</div><div class="value ${levelClass(memPct)}">${fmtPct(memPct)}</div></div>
-    <div class="metric"><div class="label">모델</div><div class="value" style="font-size:14px">${esc(info.model || '-')}</div></div>
-    <div class="metric"><div class="label">가동 시간</div><div class="value" style="font-size:14px">${info.up_time ? fmtUptime(info.up_time) : '-'}</div></div>`;
+  const info = main.info || {};
 
-  const volumes = (data.storage && data.storage.volumes) || [];
-  const storageBox = document.getElementById('synStorage');
-  if (volumes.length === 0) {
-    storageBox.innerHTML = `<div class="empty">볼륨 정보를 가져오지 못했습니다.</div>`;
-  } else {
-    storageBox.innerHTML = volumes.map((v) => {
-      const total = parseInt(v.size?.total || 0, 10);
-      const used = parseInt(v.size?.used || 0, 10);
-      const pct = total ? used / total : 0;
-      return `
-        <div class="vol">
-          <div class="vol-top"><span>${esc(v.display_name || v.id)}</span><span>${fmtBytes(used)} / ${fmtBytes(total)}</span></div>
-          <div class="bar"><div class="bar-fill" style="width:${(pct*100).toFixed(0)}%; background:${pct>0.85?'var(--bad)':pct>0.65?'var(--warn)':'var(--synology)'}"></div></div>
-        </div>`;
-    }).join('');
-  }
-
-  await Promise.all([loadSynDocker(), loadSynSessions(), loadSynBlocklist()]);
+  body.innerHTML =
+    `<div class="metrics">
+      <div class="metric"><div class="label">CPU</div><div class="value ${levelClass(cpuPct)}">${fmtPct(cpuPct)}</div></div>
+      <div class="metric"><div class="label">메모리</div><div class="value ${levelClass(memPct)}">${fmtPct(memPct)}</div></div>
+      <div class="metric"><div class="label">모델</div><div class="value" style="font-size:14px">${esc(info.model || '-')}</div></div>
+      <div class="metric"><div class="label">가동 시간</div><div class="value" style="font-size:14px">${info.up_time ? fmtUptime(info.up_time) : '-'}</div></div>
+    </div>` +
+    synStorageHtml(main.storage) +
+    synDockerHtml(docker.items || []) +
+    synSessionsHtml(sessions.items || []) +
+    blocklistHtml(block.items || [], server.id, 'syn');
 }
 
-/* ---------------- 새로고침 / 이벤트 ---------------- */
+/* ---------------- 서버 관리 모달 ---------------- */
+
+function renderServerManagerLists() {
+  const pveBox = document.getElementById('pveServerList');
+  const synBox = document.getElementById('synServerList');
+  pveBox.innerHTML = pveServers.length
+    ? pveServers.map(s => `<div class="server-list-item" data-edit-server="pve:${s.id}"><span>${esc(s.name)}</span><span class="host">${esc(s.host)}</span></div>`).join('')
+    : `<div class="empty" style="padding:6px 0;">등록된 Proxmox 서버가 없습니다.</div>`;
+  synBox.innerHTML = synServers.length
+    ? synServers.map(s => `<div class="server-list-item" data-edit-server="syn:${s.id}"><span>${esc(s.name)}</span><span class="host">${esc(s.host)}</span></div>`).join('')
+    : `<div class="empty" style="padding:6px 0;">등록된 Synology 서버가 없습니다.</div>`;
+}
+
+function openSettings() {
+  document.getElementById('settingsOverlay').classList.add('open');
+}
+document.getElementById('settingsBtn').addEventListener('click', openSettings);
+document.getElementById('addPveServerBtn').addEventListener('click', () => openServerForm('pve', null));
+document.getElementById('addSynServerBtn').addEventListener('click', () => openServerForm('syn', null));
+
+/* ---------------- 서버 추가/수정 폼 모달 ---------------- */
+
+let sfType = 'pve';
+let sfEditingId = null;
+
+function openServerForm(type, server) {
+  sfType = type;
+  sfEditingId = server ? server.id : null;
+  const typeName = type === 'pve' ? 'Proxmox' : 'Synology';
+  document.getElementById('serverFormTitle').textContent = server ? `${typeName} 서버 수정` : `${typeName} 서버 추가`;
+  document.getElementById('sfName').value = server?.name || '';
+  document.getElementById('sfHost').value = server?.host || '';
+  document.getElementById('sfPveFields').style.display = type === 'pve' ? 'block' : 'none';
+  document.getElementById('sfSynFields').style.display = type === 'syn' ? 'block' : 'none';
+
+  if (type === 'pve') {
+    document.getElementById('sfTokenId').value = server?.tokenId || '';
+    document.getElementById('sfTokenSecret').value = '';
+    document.getElementById('sfTokenSecret').placeholder = server?.hasTokenSecret ? '•••••• (저장됨, 변경하려면 입력)' : '토큰 secret 입력';
+  } else {
+    document.getElementById('sfUser').value = server?.user || '';
+    document.getElementById('sfPassword').value = '';
+    document.getElementById('sfPassword').placeholder = server?.hasPassword ? '•••••• (저장됨, 변경하려면 입력)' : '비밀번호 입력';
+  }
+
+  document.getElementById('serverDeleteBtn').style.display = server ? 'inline-block' : 'none';
+  document.getElementById('serverFormMsg').textContent = '';
+  document.getElementById('serverFormOverlay').classList.add('open');
+}
+
+document.getElementById('serverSaveBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('serverFormMsg');
+  const name = document.getElementById('sfName').value.trim();
+  const host = document.getElementById('sfHost').value.trim();
+  if (!name || !host) { msg.textContent = '이름과 호스트 주소를 입력하세요.'; msg.className = 'modal-msg error'; return; }
+
+  let payload = { name, host };
+  if (sfType === 'pve') {
+    payload.tokenId = document.getElementById('sfTokenId').value.trim();
+    payload.tokenSecret = document.getElementById('sfTokenSecret').value.trim();
+  } else {
+    payload.user = document.getElementById('sfUser').value.trim();
+    payload.password = document.getElementById('sfPassword').value.trim();
+  }
+
+  const base = sfType === 'pve' ? '/api/proxmox/servers' : '/api/synology/servers';
+  const r = sfEditingId
+    ? await api(`${base}/${sfEditingId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+    : await api(base, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+
+  if (r.ok) {
+    document.getElementById('serverFormOverlay').classList.remove('open');
+    await loadServers();
+  } else {
+    msg.textContent = r.error || '저장 실패'; msg.className = 'modal-msg error';
+  }
+});
+
+document.getElementById('serverDeleteBtn').addEventListener('click', async () => {
+  if (!sfEditingId) return;
+  if (!confirm('이 서버를 삭제할까요?')) return;
+  const base = sfType === 'pve' ? '/api/proxmox/servers' : '/api/synology/servers';
+  await api(`${base}/${sfEditingId}`, { method: 'DELETE' });
+  document.getElementById('serverFormOverlay').classList.remove('open');
+  await loadServers();
+});
+
+/* ---------------- 새로고침 / 공용 이벤트 위임 ---------------- */
 
 async function refresh() {
   document.getElementById('updated').textContent = '불러오는 중…';
   try {
-    const [pve, syn] = await Promise.all([
-      api('/api/proxmox'),
-      api('/api/synology'),
-    ]);
-    await Promise.all([renderProxmox(pve), renderSynology(syn)]);
+    await loadServers();
   } catch (e) {
     document.getElementById('updated').textContent = '불러오기 실패';
     return;
   }
-  document.getElementById('updated').textContent =
-    '마지막 업데이트 ' + new Date().toLocaleTimeString('ko-KR');
+  document.getElementById('updated').textContent = '마지막 업데이트 ' + new Date().toLocaleTimeString('ko-KR');
 }
 
-// 클릭 한 번으로 펼치기/접기 + 차단/해제 버튼 처리
 document.addEventListener('click', async (e) => {
+  // 서버 설정 버튼 (카드의 ⚙, 서버 관리 목록 항목)
+  const editServerBtn = e.target.closest('[data-edit-server]');
+  if (editServerBtn) {
+    const [type, id] = editServerBtn.dataset.editServer.split(':');
+    const server = (type === 'pve' ? pveServers : synServers).find(s => s.id === id);
+    openServerForm(type, server);
+    return;
+  }
+
+  if (e.target.closest('[data-open-settings]')) { openSettings(); return; }
+
+  // 접속 시도 목록 -> 차단
   const blockBtn = e.target.closest('[data-block-ip]');
   if (blockBtn) {
-    const ip = blockBtn.dataset.blockIp;
-    const target = blockBtn.dataset.target;
+    const ip = blockBtn.dataset.blockIp, target = blockBtn.dataset.target, serverId = blockBtn.dataset.server;
     if (!ip || ip === '-') return;
     blockBtn.textContent = '차단 중…'; blockBtn.disabled = true;
-    const url = target === 'pve' ? '/api/proxmox/block' : '/api/synology/block';
+    const url = target === 'pve' ? `/api/proxmox/${serverId}/block` : `/api/synology/${serverId}/block`;
     await api(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip }) });
-    target === 'pve' ? (await loadProxmoxBlocklist(), await loadProxmoxConnections()) : (await loadSynBlocklist(), await loadSynSessions());
+    const server = (target === 'pve' ? pveServers : synServers).find(s => s.id === serverId);
+    if (server) target === 'pve' ? loadPveZone(server) : loadSynZone(server);
     return;
   }
+
+  // 차단 목록 -> 해제
   const unblockBtn = e.target.closest('[data-unblock-ip]');
   if (unblockBtn) {
-    const ip = unblockBtn.dataset.unblockIp;
-    const target = unblockBtn.dataset.target;
+    const ip = unblockBtn.dataset.unblockIp, target = unblockBtn.dataset.target, serverId = unblockBtn.dataset.server;
     unblockBtn.textContent = '해제 중…'; unblockBtn.disabled = true;
-    const url = target === 'pve' ? `/api/proxmox/block/${encodeURIComponent(ip)}` : `/api/synology/block/${encodeURIComponent(ip)}`;
+    const url = target === 'pve' ? `/api/proxmox/${serverId}/block/${encodeURIComponent(ip)}` : `/api/synology/${serverId}/block/${encodeURIComponent(ip)}`;
     await api(url, { method: 'DELETE' });
-    target === 'pve' ? await loadProxmoxBlocklist() : await loadSynBlocklist();
+    const server = (target === 'pve' ? pveServers : synServers).find(s => s.id === serverId);
+    if (server) target === 'pve' ? loadPveZone(server) : loadSynZone(server);
     return;
   }
+
+  // 직접 IP 입력 -> 차단
+  const submitBtn = e.target.closest('[data-block-submit]');
+  if (submitBtn) {
+    const target = submitBtn.dataset.blockSubmit, serverId = submitBtn.dataset.server;
+    const input = submitBtn.closest('.block-input-row').querySelector('[data-block-input]');
+    const ip = input.value.trim();
+    if (!ip) return;
+    const url = target === 'pve' ? `/api/proxmox/${serverId}/block` : `/api/synology/${serverId}/block`;
+    await api(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip }) });
+    input.value = '';
+    const server = (target === 'pve' ? pveServers : synServers).find(s => s.id === serverId);
+    if (server) target === 'pve' ? loadPveZone(server) : loadSynZone(server);
+    return;
+  }
+
+  // VM/컨테이너 행 펼치기/접기
   const row = e.target.closest('.row[data-toggle]');
-  if (row) row.classList.toggle('expanded');
+  if (row) { row.classList.toggle('expanded'); return; }
+
+  // 모달 닫기 (공용 X 버튼, 오버레이 배경 클릭은 별도 리스너)
+  const closeBtn = e.target.closest('[data-close]');
+  if (closeBtn) { document.getElementById(closeBtn.dataset.close).classList.remove('open'); return; }
 });
 
-document.getElementById('pveBlockBtn').addEventListener('click', async () => {
-  const input = document.getElementById('pveBlockInput');
-  const ip = input.value.trim();
-  if (!ip) return;
-  await api('/api/proxmox/block', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip }) });
-  input.value = '';
-  await loadProxmoxBlocklist();
+document.getElementById('settingsOverlay').addEventListener('click', (e) => { if (e.target.id === 'settingsOverlay') e.currentTarget.classList.remove('open'); });
+document.getElementById('serverFormOverlay').addEventListener('click', (e) => { if (e.target.id === 'serverFormOverlay') e.currentTarget.classList.remove('open'); });
+
+/* ---------------- 서비스 바로가기 (그룹/타일) ---------------- */
+
+const PALETTE = ['#e8823c','#4f8ff0','#5cc98a','#e0b84c','#a978e0','#e5636b','#3fc0c7','#c77dd6'];
+function colorFor(name) {
+  let h = 0;
+  for (const c of String(name)) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return PALETTE[h % PALETTE.length];
+}
+
+let tileStatusCache = {};
+let editingGroupId = null; // 그룹 모달에서 수정 중인 그룹 id (null이면 새로 만들기)
+let editingTileId = null;  // 타일 모달에서 수정 중인 타일 id (null이면 새로 만들기)
+let editingTileGroupId = null;
+
+function tileEl(tile) {
+  const st = tileStatusCache[tile.id] || {};
+  const statusClass = tile.statusCheck === false ? '' : (st.status || 'unknown');
+  const iconHtml = tile.icon
+    ? `<img src="${esc(tile.icon)}" alt="">`
+    : esc((tile.name || '?').trim().charAt(0).toUpperCase());
+  const stats = st.stats || [];
+  const statsHtml = stats.length ? `
+    <div class="tile-stats">
+      ${stats.slice(0,4).map(s => `<div class="tile-stat"><div class="v">${esc(s.value)}</div><div class="l">${esc(s.label)}</div></div>`).join('')}
+    </div>` : '';
+  return `
+    <div class="tile">
+      <button class="tile-edit-btn" data-edit-tile="${tile.id}" data-group="${tile.groupId}">✎</button>
+      <a href="${esc(tile.url || '#')}" target="_blank" rel="noopener" class="tile-top" style="text-decoration:none">
+        <div class="tile-icon" style="background:${tile.icon ? 'transparent' : colorFor(tile.name)}">${iconHtml}</div>
+        <div class="tile-text">
+          <span style="display:flex;align-items:center;gap:6px;">
+            <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(tile.name)}</span>
+          </span>
+          <div class="sub">${esc(tile.subtitle || '')}</div>
+        </div>
+        ${tile.statusCheck === false ? '' : `<span class="tile-status ${statusClass}"></span>`}
+      </a>
+      ${statsHtml}
+    </div>`;
+}
+
+function renderGroups(groups) {
+  const box = document.getElementById('groupsContainer');
+  if (groups.length === 0) {
+    box.innerHTML = `<div class="empty" style="padding:20px 0;">아직 추가된 바로가기가 없습니다. 위 "+ 그룹 추가" 버튼으로 시작하세요.</div>`;
+    return;
+  }
+  box.innerHTML = groups.map(g => `
+    <div class="group-card">
+      <div class="group-head">
+        <h3>${esc(g.name)}</h3>
+        <div class="group-actions">
+          <button class="icon-btn" data-edit-group="${g.id}" title="그룹 수정">✎</button>
+        </div>
+      </div>
+      <div class="tile-grid">
+        ${(g.tiles || []).map(t => tileEl({ ...t, groupId: g.id })).join('')}
+        <button class="add-tile-card" data-add-tile="${g.id}">+ 바로가기 추가</button>
+      </div>
+    </div>`).join('');
+}
+
+let groupsCache = [];
+
+async function loadGroups() {
+  const data = await api('/api/groups');
+  groupsCache = data.groups || [];
+  renderGroups(groupsCache);
+  loadTileStatus();
+}
+
+async function loadTileStatus() {
+  const data = await api('/api/tiles/status');
+  tileStatusCache = data.items || {};
+  renderGroups(groupsCache);
+}
+
+/* --- 그룹 모달 --- */
+function openGroupModal(group) {
+  editingGroupId = group ? group.id : null;
+  document.getElementById('groupModalTitle').textContent = group ? '그룹 수정' : '그룹 추가';
+  document.getElementById('groupNameInput').value = group ? group.name : '';
+  document.getElementById('groupDeleteBtn').style.display = group ? 'inline-block' : 'none';
+  document.getElementById('groupModalMsg').textContent = '';
+  document.getElementById('groupModalOverlay').classList.add('open');
+}
+
+document.getElementById('addGroupBtn').addEventListener('click', () => openGroupModal(null));
+
+document.getElementById('groupSaveBtn').addEventListener('click', async () => {
+  const name = document.getElementById('groupNameInput').value.trim();
+  const msg = document.getElementById('groupModalMsg');
+  if (!name) { msg.textContent = '이름을 입력하세요.'; msg.className = 'modal-msg error'; return; }
+  const r = editingGroupId
+    ? await api(`/api/groups/${editingGroupId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name }) })
+    : await api('/api/groups', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name }) });
+  if (r.ok) {
+    document.getElementById('groupModalOverlay').classList.remove('open');
+    await loadGroups();
+  } else {
+    msg.textContent = r.error || '저장 실패'; msg.className = 'modal-msg error';
+  }
 });
 
-document.getElementById('synBlockBtn').addEventListener('click', async () => {
-  const input = document.getElementById('synBlockInput');
-  const ip = input.value.trim();
-  if (!ip) return;
-  await api('/api/synology/block', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ ip }) });
-  input.value = '';
-  await loadSynBlocklist();
+document.getElementById('groupDeleteBtn').addEventListener('click', async () => {
+  if (!editingGroupId) return;
+  if (!confirm('이 그룹과 안의 바로가기를 모두 삭제할까요?')) return;
+  await api(`/api/groups/${editingGroupId}`, { method: 'DELETE' });
+  document.getElementById('groupModalOverlay').classList.remove('open');
+  await loadGroups();
 });
+
+/* --- 타일 모달 --- */
+let cjFields = [];
+
+function renderCjFields() {
+  const box = document.getElementById('cjFieldsList');
+  box.innerHTML = cjFields.map((f, i) => `
+    <div class="custom-field-row">
+      <input type="text" placeholder="라벨 (예: USERS)" value="${esc(f.label)}" data-cj-label="${i}">
+      <input type="text" placeholder="경로 (예: stats.users)" value="${esc(f.path)}" data-cj-path="${i}">
+      <button class="icon-btn" data-cj-remove="${i}">✕</button>
+    </div>`).join('');
+}
+
+document.getElementById('cjAddFieldBtn').addEventListener('click', () => {
+  if (cjFields.length >= 4) return;
+  cjFields.push({ label: '', path: '' });
+  renderCjFields();
+});
+
+document.getElementById('cjFieldsList').addEventListener('input', (e) => {
+  const li = e.target.dataset.cjLabel, pi = e.target.dataset.cjPath;
+  if (li !== undefined) cjFields[li].label = e.target.value;
+  if (pi !== undefined) cjFields[pi].path = e.target.value;
+});
+document.getElementById('cjFieldsList').addEventListener('click', (e) => {
+  const ri = e.target.dataset.cjRemove;
+  if (ri !== undefined) { cjFields.splice(ri, 1); renderCjFields(); }
+});
+
+function toggleWidgetFields() {
+  const w = document.getElementById('tileWidget').value;
+  document.getElementById('portainerFields').style.display = w === 'portainer' ? 'block' : 'none';
+  document.getElementById('customJsonFields').style.display = w === 'custom_json' ? 'block' : 'none';
+}
+document.getElementById('tileWidget').addEventListener('change', toggleWidgetFields);
+
+function openTileModal(groupId, tile) {
+  editingTileGroupId = groupId;
+  editingTileId = tile ? tile.id : null;
+  document.getElementById('tileModalTitle').textContent = tile ? '바로가기 수정' : '바로가기 추가';
+  document.getElementById('tileName').value = tile?.name || '';
+  document.getElementById('tileSubtitle').value = tile?.subtitle || '';
+  document.getElementById('tileUrl').value = tile?.url || '';
+  document.getElementById('tileIcon').value = tile?.icon || '';
+  document.getElementById('tileStatusCheck').checked = tile?.statusCheck !== false;
+  document.getElementById('tileWidget').value = tile?.widget || 'none';
+  document.getElementById('pfHost').value = tile?.portainer?.host || '';
+  document.getElementById('pfApiKey').value = '';
+  document.getElementById('pfApiKey').placeholder = tile?.portainer?.hasApiKey ? '•••••• (저장됨, 변경하려면 입력)' : 'API Key 입력';
+  document.getElementById('cjEndpoint').value = tile?.customJson?.endpoint || '';
+  document.getElementById('cjHeaderName').value = tile?.customJson?.headerName || '';
+  document.getElementById('cjHeaderValue').value = '';
+  document.getElementById('cjHeaderValue').placeholder = tile?.customJson?.hasHeaderValue ? '•••••• (저장됨)' : '헤더 값 (선택)';
+  cjFields = tile?.customJson?.fields ? [...tile.customJson.fields] : [];
+  renderCjFields();
+  toggleWidgetFields();
+  document.getElementById('tileDeleteBtn').style.display = tile ? 'inline-block' : 'none';
+  document.getElementById('tileModalMsg').textContent = '';
+  document.getElementById('tileModalOverlay').classList.add('open');
+}
+
+document.getElementById('tileSaveBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('tileModalMsg');
+  const name = document.getElementById('tileName').value.trim();
+  if (!name) { msg.textContent = '이름을 입력하세요.'; msg.className = 'modal-msg error'; return; }
+  const widget = document.getElementById('tileWidget').value;
+  const payload = {
+    name,
+    subtitle: document.getElementById('tileSubtitle').value.trim(),
+    url: document.getElementById('tileUrl').value.trim(),
+    icon: document.getElementById('tileIcon').value.trim(),
+    statusCheck: document.getElementById('tileStatusCheck').checked,
+    widget,
+  };
+  if (widget === 'portainer') {
+    payload.portainer = { host: document.getElementById('pfHost').value.trim(), apiKey: document.getElementById('pfApiKey').value.trim() };
+  }
+  if (widget === 'custom_json') {
+    payload.customJson = {
+      endpoint: document.getElementById('cjEndpoint').value.trim(),
+      headerName: document.getElementById('cjHeaderName').value.trim(),
+      headerValue: document.getElementById('cjHeaderValue').value.trim(),
+      fields: cjFields.filter(f => f.label && f.path),
+    };
+  }
+  const r = editingTileId
+    ? await api(`/api/tiles/${editingTileId}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) })
+    : await api(`/api/groups/${editingTileGroupId}/tiles`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  if (r.ok) {
+    document.getElementById('tileModalOverlay').classList.remove('open');
+    await loadGroups();
+  } else {
+    msg.textContent = r.error || '저장 실패'; msg.className = 'modal-msg error';
+  }
+});
+
+document.getElementById('tileDeleteBtn').addEventListener('click', async () => {
+  if (!editingTileId) return;
+  if (!confirm('이 바로가기를 삭제할까요?')) return;
+  await api(`/api/tiles/${editingTileId}`, { method: 'DELETE' });
+  document.getElementById('tileModalOverlay').classList.remove('open');
+  await loadGroups();
+});
+
+// 그룹/타일 관련 클릭 위임 (수정 버튼, 추가 버튼, 모달 닫기)
+document.addEventListener('click', (e) => {
+  const editGroupBtn = e.target.closest('[data-edit-group]');
+  if (editGroupBtn) { openGroupModal(groupsCache.find(g => g.id === editGroupBtn.dataset.editGroup)); return; }
+
+  const addTileBtn = e.target.closest('[data-add-tile]');
+  if (addTileBtn) { openTileModal(addTileBtn.dataset.addTile, null); return; }
+
+  const editTileBtn = e.target.closest('[data-edit-tile]');
+  if (editTileBtn) {
+    e.preventDefault();
+    const g = groupsCache.find(g => g.id === editTileBtn.dataset.group);
+    const t = g?.tiles.find(t => t.id === editTileBtn.dataset.editTile);
+    if (t) openTileModal(g.id, t);
+    return;
+  }
+
+  const closeBtn = e.target.closest('[data-close]');
+  if (closeBtn) { document.getElementById(closeBtn.dataset.close).classList.remove('open'); return; }
+});
+document.getElementById('groupModalOverlay').addEventListener('click', (e) => { if (e.target.id === 'groupModalOverlay') e.currentTarget.classList.remove('open'); });
+document.getElementById('tileModalOverlay').addEventListener('click', (e) => { if (e.target.id === 'tileModalOverlay') e.currentTarget.classList.remove('open'); });
+
+loadGroups();
+setInterval(loadTileStatus, 20000);
 
 document.getElementById('refreshBtn').addEventListener('click', refresh);
 

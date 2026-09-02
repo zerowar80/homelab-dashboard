@@ -92,4 +92,16 @@ echo "==> 컨테이너 안에 Docker + 대시보드 설치"
 pct exec "$CTID" -- bash -c "apt-get update -qq && apt-get install -y -qq curl git ca-certificates"
 pct exec "$CTID" -- bash -c "curl -fsSL https://get.docker.com | sh"
 pct exec "$CTID" -- bash -c "git clone '${REPO_URL}' /opt/homelab-dashboard"
-pct exec "$CTID" -- bash -c "cp
+pct exec "$CTID" -- bash -c "cp /opt/homelab-dashboard/.env.example /opt/homelab-dashboard/.env"
+pct exec "$CTID" -- bash -c "cd /opt/homelab-dashboard && docker compose up -d --build"
+
+IP=$(pct exec "$CTID" -- hostname -I | awk '{print $1}')
+
+echo ""
+echo "================================================================"
+echo " LXC #$CTID 생성 및 대시보드 실행 완료 (IP: ${IP:-확인중})"
+echo ""
+echo " 브라우저에서 접속한 뒤 우측 상단 '⚙ 설정' 버튼으로"
+echo " Proxmox/Synology 접속 정보를 입력하세요:"
+echo "   http://${IP:-<컨테이너IP>}:3000"
+echo "================================================================"

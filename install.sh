@@ -29,20 +29,13 @@ fi
 cd "$INSTALL_DIR"
 
 echo "==> [3/4] 환경설정 파일 준비"
-if [ ! -f .env ]; then
-  cp .env.example .env
-  echo ""
-  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  echo "  아직 접속 정보가 없습니다. 아래 파일을 열어 채운 뒤"
-  echo "  이 스크립트를 다시 실행하세요:"
-  echo "    ${INSTALL_DIR}/.env"
-  echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-  exit 0
-fi
+[ -f .env ] || cp .env.example .env
 
 echo "==> [4/4] 빌드 및 실행"
 docker compose up -d --build
 
 IP=$(hostname -I 2>/dev/null | awk '{print $1}')
 echo ""
-echo "설치 완료! 브라우저에서 접속하세요: http://${IP:-<서버IP>}:3000"
+echo "설치 완료! 브라우저에서 접속한 뒤 우측 상단 '⚙ 설정' 버튼으로"
+echo "Proxmox/Synology 접속 정보를 입력하세요:"
+echo "  http://${IP:-<서버IP>}:3000"

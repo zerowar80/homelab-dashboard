@@ -1,39 +1,55 @@
 # 홈랩 대시보드
 
 Proxmox VE와 Synology DSM 상태를 한 화면에서 보는 모니터링 페이지입니다.
-VM/컨테이너, 스토리지 볼륨 정보는 한 번 클릭으로 펼치고 접을 수 있고, 각 서버의 실제
-관리 화면은 우측 상단 "웹 UI 열기" 버튼으로 바로 이동합니다. 15초마다 자동 새로고침됩니다.
+**Proxmox든 Synology든 몇 대든 추가할 수 있습니다** (예: 거실 Proxmox + 사무실 Proxmox +
+NAS 2대 등). VM/컨테이너, 스토리지 볼륨 정보는 한 번 클릭으로 펼치고 접을 수 있고, 각
+서버의 실제 관리 화면은 카드 우측 상단 "웹 UI 열기" 버튼으로 바로 이동합니다. 15초마다
+자동 새로고침됩니다.
+
+**서버 등록/삭제는 브라우저 우측 상단 "⚙ 설정" 버튼으로 합니다.** `.env` 파일을 직접
+편집할 필요가 없습니다 (입력한 값은 컨테이너 안의 `data/config.json`에 저장되고,
+컨테이너를 재생성해도 유지됩니다).
 
 **포함 기능**
+- **Proxmox·Synology 모두 여러 대 등록 가능** (⚙ 설정에서 + 버튼으로 추가/삭제)
 - Proxmox 노드 CPU/메모리/디스크, VM·LXC별 "실행 중 / 중지됨" 표시
 - Synology CPU/메모리/스토리지 사용량
 - **Synology Container Manager(Docker) 컨테이너별 실행 상태**
 - **Proxmox 방화벽 로그 기반 최근 접속 시도(IP) 표시 + 원클릭 IP 차단**
 - **Synology 현재 로그인 세션(계정/IP) 표시 + 원클릭 IP 차단**
 - 두 서버 모두 차단 목록을 대시보드에서 바로 확인/해제
+- **브라우저에서 바로 설정하는 ⚙ 설정 화면** (파일 편집 불필요)
+- **서비스 바로가기 (홈페이지 스타일)**: Portainer, Immich 등 자주 쓰는 서비스를
+  그룹으로 묶어 타일로 표시. 온라인 상태 점, 그리고 Portainer(컨테이너 실행 현황)나
+  커스텀 JSON API를 연결하면 실제 통계 숫자까지 표시됩니다. 전부 "+ 그룹 추가" /
+  "+ 바로가기 추가" 버튼으로 UI에서 바로 만들고, 타일에 마우스를 올리면 나오는
+  ✎ 버튼으로 수정/삭제합니다.
 
 > ⚠️ Proxmox·Synology 모두 공식적으로 정식 문서화되지 않은 내부 API를 일부 사용합니다
 > (특히 Synology의 로그인 세션/Docker 컨테이너 API). DSM 버전에 따라 응답 형식이 달라질
 > 수 있고, 이 경우 해당 섹션에 에러 메시지가 표시됩니다 — `server.js`에서 필드명을
 > 조정하면 됩니다.
+>
+> 두 서비스 모두 자체 서명 인증서를 쓰는 경우가 많아 서버 쪽에서 인증서 검증을 끄고
+> 요청합니다(사설 네트워크 내부용으로만 사용하세요).
 
 ## 설치 방법 (3가지 중 선택)
 
 먼저 이 프로젝트를 GitHub 저장소에 올려두면 아래 방법들이 편해집니다. 저장소 주소를
 `YOUR_USERNAME` 부분만 본인 것으로 바꿔서 사용하세요.
 
-### A. Proxmox — LXC 자동 생성 (한 번에 설치)
+### A. Proxmox — LXC 자동 생성 (완전 자동)
 
-**Proxmox 웹 UI의 노드 → Shell**에서 아래 실행 (Docker가 설치된 새 LXC 컨테이너를
-만들고 대시보드까지 클론해줍니다):
+**Proxmox 웹 UI의 노드 → Shell**에서 아래 실행:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/homelab-dashboard/main/scripts/proxmox-create-lxc.sh)
 ```
 
-스크립트 안의 `STORAGE`, `CT_PASSWORD` 값은 본인 환경에 맞게 미리 열어서 수정해두는 걸
-권장합니다 (`pvesm status`로 스토리지 이름 확인). 완료되면 안내에 따라 LXC 안에서
-`.env`만 채우고 `docker compose up -d --build` 한 번 더 실행하면 끝입니다.
+스토리지 · 네트워크 브리지 · root 비밀번호를 **터미널에서 직접 골라서/입력해서** 진행하고
+(여러 개면 번호로 선택하는 메뉴가 뜨고, 하나뿐이면 자동으로 씁니다), Docker 설치부터
+컨테이너 실행까지 전부 자동으로 끝납니다. 완료되면 바로 브라우저에서
+`http://컨테이너IP:3000`에 접속해 **⚙ 설정** 버튼으로 마무리하면 됩니다.
 
 ### B. 이미 있는 VM/LXC에 설치 (범용 1줄 설치)
 
@@ -44,8 +60,7 @@ sudo bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/homelab-d
   https://github.com/YOUR_USERNAME/homelab-dashboard.git
 ```
 
-Docker가 없으면 자동 설치하고, 프로젝트를 클론한 뒤 `.env`가 없으면 템플릿을 만들어주고
-멈춥니다 — `.env`를 채운 뒤 같은 명령을 한 번 더 실행하면 빌드 및 실행까지 됩니다.
+Docker가 없으면 자동 설치하고, 클론 → 빌드 → 실행까지 한 번에 끝납니다.
 
 ### C. Synology — Container Manager (GUI, 가장 안전)
 
@@ -57,68 +72,77 @@ Synology는 시스템 특성상 임의 스크립트로 패키지를 설치하는
 3. 패키지 센터에서 **Container Manager** 설치 (없다면)
 4. Container Manager → **프로젝트 → 생성** → 경로를 방금 업로드한 폴더로 지정
    (`docker-compose.yml`을 자동으로 인식합니다)
-5. 생성 전에 File Station에서 `.env.example`을 `.env`로 복사 + 이름 변경하고, 텍스트
-   편집기로 열어 접속 정보를 채워두세요
-6. **빌드** 실행 → 완료되면 `http://시놀로지IP:3000` 접속
+5. **빌드** 실행 → 완료되면 `http://시놀로지IP:3000` 접속 → **⚙ 설정** 버튼으로 마무리
 
 ---
 
-## 1. Proxmox API 토큰 만들기
+## 브라우저에서 서버 등록하기
 
-1. Proxmox 웹 UI 접속 → **Datacenter → Permissions → API Tokens → Add**
-2. User: `root@pam` (또는 별도 모니터링 전용 계정), Token ID: `dashboard`
-3. **Privilege Separation 체크 해제** (해제 안 하면 별도로 권한을 부여해야 합니다)
-4. 생성된 Token ID(`root@pam!dashboard`)와 Secret을 `.env`에 기록
+설치 후 우측 상단 **⚙ 설정** 버튼을 누르면 "서버 관리" 화면이 열립니다. Proxmox와
+Synology 각각 **+ 서버 추가** 버튼으로 원하는 만큼 등록하세요. 이미 등록한 서버는
+목록에서 클릭하면 수정/삭제할 수 있습니다. 등록한 서버마다 대시보드에 카드가 하나씩
+따로 생깁니다.
+
+### Proxmox 서버 추가 시 입력값
+
+| 항목 | 값 |
+|---|---|
+| 표시 이름 | 카드에 보일 이름 (예: "거실 Proxmox") |
+| 호스트 주소 | `https://프록스목스IP:8006` |
+| API 토큰 ID | `root@pam!dashboard` 형식 |
+| API 토큰 Secret | 아래에서 발급 |
+
+발급 방법: Proxmox 웹 UI → **Datacenter → Permissions → API Tokens → Add**
+→ User `root@pam` (또는 별도 계정), Token ID `dashboard`, **Privilege Separation 체크
+해제** → 생성된 Token ID와 Secret을 그대로 설정 화면에 입력.
 
 Proxmox 접속 시도 목록은 **노드 방화벽 로그**에서 가져옵니다. 기본적으로 꺼져 있으므로
 보려면 **Datacenter → Firewall → Options**에서 방화벽을 켜고, 로그를 보고 싶은 노드의
 **Firewall → Options**에서 `Log level in`을 `info` 이상으로 설정하세요. 켜지 않아도
 차단 기능(수동 IP 입력) 자체는 그대로 작동합니다.
 
-## 2. Synology 읽기 전용 계정 만들기
+### Synology 서버 추가 시 입력값
 
-1. DSM → **제어판 → 사용자 및 그룹 → 사용자 → 생성**
-2. `dashboard-readonly` 같은 이름으로 생성, 애플리케이션 권한은 최소한으로 제한
-3. 계정/비밀번호를 `.env`에 기록
-4. Docker 컨테이너 목록을 보려면 **Container Manager**(구 Docker) 패키지가 설치되어
-   있어야 하고, 위 계정이 해당 패키지 접근 권한을 갖고 있어야 합니다
-5. IP 차단은 DSM의 **제어판 → 보안 → 계정 → 자동 차단** 기능을 사용합니다. 이 계정으로
-   보안 설정을 변경할 수 있어야 하므로, 관리자 권한이 필요할 수 있습니다
+| 항목 | 값 |
+|---|---|
+| 표시 이름 | 카드에 보일 이름 (예: "안방 NAS") |
+| 호스트 주소 | `https://시놀로지IP:5001` |
+| 계정 | 읽기 전용 계정 추천 |
+| 비밀번호 | 위 계정 비밀번호 |
 
-> 두 서비스 모두 자체 서명 인증서를 쓰는 경우가 많아 서버 쪽에서 인증서 검증을 끄고
-> 요청합니다(사설 네트워크 내부용으로만 사용하세요).
+계정 준비: DSM → **제어판 → 사용자 및 그룹 → 사용자 → 생성** (`dashboard-readonly` 같은
+이름으로, 권한은 최소한으로). Docker 컨테이너 목록을 보려면 **Container Manager** 패키지가
+설치되어 있어야 하고, IP 차단은 DSM의 **제어판 → 보안 → 계정 → 자동 차단** 기능을 쓰므로
+계정이 보안 설정을 바꿀 수 있어야 합니다 (관리자 권한 필요할 수 있음).
 
-## 3. 설정 파일 준비
+## 서비스 바로가기 만들기
 
-```bash
-cp .env.example .env
-# .env 파일을 열어 위에서 만든 값들을 채워 넣으세요
-```
-
-## 4. 실행 (Docker Compose)
-
-```bash
-docker compose up -d --build
-```
-
-브라우저에서 `http://<서버IP>:3000` 접속.
-
-> 위 "설치 방법" 섹션의 A/B/C 방법을 썼다면 이 3, 4단계는 이미 끝나 있는 상태입니다.
+1. 대시보드 맨 아래 "서비스 바로가기" 섹션에서 **+ 그룹 추가**로 카테고리를 먼저 만듭니다
+   (예: "핵심 관리", "미디어 서버")
+2. 그룹 안의 **+ 바로가기 추가**로 타일을 만듭니다: 이름, URL, (선택) 아이콘 이미지 주소를
+   입력하면 끝 — 타일을 클릭하면 새 탭으로 이동합니다
+3. 통계까지 보고 싶으면 "통계 위젯"에서:
+   - **Portainer**: Portainer 주소 + API Key(Portainer → 사용자 설정 → Access Tokens에서
+     발급) 입력 → 실행중/중지됨/전체 컨테이너 수 표시
+   - **커스텀 JSON API**: 통계를 JSON으로 내려주는 아무 API 주소(+필요하면 인증 헤더)를
+     넣고, 보고 싶은 값의 경로를 점 표기법으로 입력 (예: `stats.photos.total`) — 최대 4개
+4. 이미 만든 타일은 마우스를 올리면 우측 상단에 나오는 **✎** 버튼으로 수정/삭제,
+   그룹은 그룹 이름 옆의 **✎** 버튼으로 수정/삭제합니다
 
 ## 폴더 구조
 
 ```
 homelab-dashboard/
-├── server.js          # Express 백엔드 (Proxmox/Synology API 프록시)
+├── server.js          # Express 백엔드 (Proxmox/Synology API 프록시 + 설정 저장)
 ├── package.json
 ├── public/
-│   └── index.html      # 프론트엔드 (단일 파일, CSS/JS 인라인)
+│   └── index.html      # 프론트엔드 (단일 파일, CSS/JS 인라인, 설정 모달 포함)
 ├── Dockerfile
-├── docker-compose.yml
+├── docker-compose.yml   # data/ 폴더를 볼륨으로 마운트해 설정을 영구 보관
 ├── install.sh          # 범용 1줄 설치 스크립트 (VM/LXC 안에서 실행)
 ├── scripts/
 │   └── proxmox-create-lxc.sh  # Proxmox 호스트에서 LXC 자동 생성 + 설치
-├── .env.example
+├── .env.example         # PORT 등 최소한의 값만 (접속 정보는 웹 UI에서)
 └── .gitignore
 ```
 
@@ -136,3 +160,5 @@ homelab-dashboard/
   `POST /nodes/{node}/qemu/{vmid}/status/start` 같은 Proxmox API 엔드포인트를 추가하면 됩니다
   (실수로 서버를 끄는 걸 막기 위해 기본값에서는 제외했습니다)
 - **색상/폰트**: `index.html` 상단 `:root` 안의 CSS 변수만 바꾸면 전체 톤이 바뀝니다
+- **설정값 초기화**: 컨테이너 안의 `data/config.json` 파일을 지우고 재시작하면 처음 상태로
+  돌아갑니다
