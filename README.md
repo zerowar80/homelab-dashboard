@@ -58,15 +58,16 @@ NAS 2대 등). VM/컨테이너, 스토리지 볼륨 정보는 한 번 클릭으�
 
 ## 설치 방법 (3가지 중 선택)
 
-먼저 이 프로젝트를 GitHub 저장소에 올려두면 아래 방법들이 편해집니다. 저장소 주소를
-`YOUR_USERNAME` 부분만 본인 것으로 바꿔서 사용하세요.
+아래 명령어는 이미 이 저장소(`zerowar80/homelab-dashboard`) 주소로 되어 있어서 그대로
+복사해서 쓰시면 됩니다. 만약 이 프로젝트를 포크(fork)해서 본인 계정으로 따로 관리하실
+거면, 명령어 안의 `zerowar80` 부분을 본인 GitHub 아이디로 바꿔주세요.
 
 ### A. Proxmox — LXC 자동 생성 (완전 자동)
 
 **Proxmox 웹 UI의 노드 → Shell**에서 아래 실행:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/homelab-dashboard/main/scripts/proxmox-create-lxc.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/zerowar80/homelab-dashboard/main/scripts/proxmox-create-lxc.sh)
 ```
 
 스토리지 · 네트워크 브리지 · root 비밀번호를 **터미널에서 직접 골라서/입력해서** 진행하고
@@ -79,8 +80,8 @@ bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/homelab-dashbo
 Docker를 쓸 수 있는 Debian/Ubuntu 계열 VM이나 LXC 안에서:
 
 ```bash
-sudo bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/homelab-dashboard/main/install.sh) \
-  https://github.com/YOUR_USERNAME/homelab-dashboard.git
+sudo bash <(curl -fsSL https://raw.githubusercontent.com/zerowar80/homelab-dashboard/main/install.sh) \
+  https://github.com/zerowar80/homelab-dashboard.git
 ```
 
 Docker가 없으면 자동 설치하고, 클론 → 빌드 → 실행까지 한 번에 끝납니다.

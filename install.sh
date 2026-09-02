@@ -4,7 +4,7 @@
 # 예시:   bash install.sh https://github.com/USERNAME/homelab-dashboard.git
 set -e
 
-REPO_URL="${1:-https://github.com/YOUR_USERNAME/homelab-dashboard.git}"
+REPO_URL="${1:-https://github.com/zerowar80/homelab-dashboard.git}"
 INSTALL_DIR="${2:-/opt/homelab-dashboard}"
 
 if [ "$EUID" -ne 0 ]; then
