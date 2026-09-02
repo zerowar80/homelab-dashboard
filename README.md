@@ -1,6 +1,7 @@
 # 홈랩 대시보드
-<img width="2546" height="1263" alt="2" src="https://github.com/user-attachments/assets/510487a9-4b82-4462-aa9d-e6b5e368654d" />
-<img width="2547" height="1261" alt="1" src="https://github.com/user-attachments/assets/e6cb7f62-43a1-42e9-9705-5946f73e30b2" />
+<img width="2547" height="1261" alt="1" src="https://github.com/user-attachments/assets/82fba709-6ff5-411e-946b-d2d54026e0e9" />
+<img width="2547" height="1261" alt="1" src="https://github.com/user-attachments/assets/da748129-3400-4cbd-ac19-c82691a8155b" />
+
 
 Proxmox VE와 Synology DSM 상태를 한 화면에서 보는 모니터링 페이지입니다.
 **Proxmox든 Synology든 몇 대든 추가할 수 있습니다** (예: 거실 Proxmox + 사무실 Proxmox +
