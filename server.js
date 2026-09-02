@@ -651,18 +651,36 @@ app.get('/api/proxmox/:id/connections', async (req, res) => {
 
 /* --------- Synology: 로그인 세션 / IP 차단 / Docker 컨테이너 --------- */
 
+// DSM 버전마다 API의 최신 버전 번호가 다를 수 있어서, 고정값 대신 매번 물어봅니다.
+const synApiVersionCache = {}; // { [serverId]: { [apiName]: maxVersion } }
+
+async function synApiMaxVersion(server, sid, apiName) {
+  synApiVersionCache[server.id] = synApiVersionCache[server.id] || {};
+  if (synApiVersionCache[server.id][apiName]) return synApiVersionCache[server.id][apiName];
+  const r = await axios.get(`${server.host}/webapi/entry.cgi`, {
+    params: { api: 'SYNO.API.Info', version: 1, method: 'query', query: apiName, _sid: sid },
+    httpsAgent: insecureAgent, timeout: 5000,
+  });
+  const info = r.data?.data?.[apiName];
+  const version = info?.maxVersion || 1;
+  synApiVersionCache[server.id][apiName] = version;
+  return version;
+}
+
 app.get('/api/synology/:id/sessions', async (req, res) => {
   const server = findSyn(req.params.id);
   if (!server) return res.json({ ok: false, items: [] });
   try {
     const sid = await synLogin(server);
+    const apiName = 'SYNO.Core.CurrentConnection';
+    const version = await synApiMaxVersion(server, sid, apiName);
     const r = await axios.get(`${server.host}/webapi/entry.cgi`, {
-      params: { api: 'SYNO.Core.CurrentConnection.Login', version: 1, method: 'list', _sid: sid },
+      params: { api: apiName, version, method: 'list', type: 'login', _sid: sid },
       httpsAgent: insecureAgent, timeout: 5000,
     });
     if (!r.data.success) throw new Error('API 오류 코드 ' + r.data.error?.code);
-    const list = r.data.data.items || r.data.data.list || r.data.data || [];
-    res.json({ ok: true, items: list });
+    const list = r.data.data.items || r.data.data.list || r.data.data.connection || r.data.data || [];
+    res.json({ ok: true, items: Array.isArray(list) ? list : [] });
   } catch (err) {
     res.json({ ok: false, error: err.message, items: [] });
   }
@@ -723,13 +741,18 @@ app.get('/api/synology/:id/docker', async (req, res) => {
   if (!server) return res.json({ ok: false, items: [] });
   try {
     const sid = await synLogin(server);
+    const apiName = 'SYNO.Docker.Container';
+    const version = await synApiMaxVersion(server, sid, apiName);
     const r = await axios.get(`${server.host}/webapi/entry.cgi`, {
-      params: { api: 'SYNO.Docker.Container', version: 1, method: 'list', _sid: sid },
+      params: { api: apiName, version, method: 'list', limit: -1, offset: 0, type: 'all', _sid: sid },
       httpsAgent: insecureAgent, timeout: 5000,
     });
     if (!r.data.success) throw new Error('API 오류 코드 ' + r.data.error?.code + ' (Container Manager 패키지가 설치되어 있는지 확인하세요)');
-    const items = r.data.data.containers || r.data.data.list || r.data.data || [];
-    res.json({ ok: true, items });
+    const raw = r.data.data;
+    const items = Array.isArray(raw) ? raw
+      : Array.isArray(raw?.containers) ? raw.containers
+      : raw && typeof raw === 'object' ? Object.values(raw) : [];
+    res.json({ ok: true, items: items.map((c) => ({ name: c.name, status: c.status, image: c.image || c.path || '' })) });
   } catch (err) {
     res.json({ ok: false, error: err.message, items: [] });
   }
