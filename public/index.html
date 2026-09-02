@@ -57,7 +57,7 @@
 
   .zone{
     background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
-    overflow:auto; resize:both; min-width:280px; min-height:140px;
+    overflow:auto; resize:vertical; min-height:140px;
   }
   .zone-head{
     display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px;
@@ -248,7 +248,7 @@
   .tile{
     background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:10px;
     position:relative; transition:border-color .15s;
-    overflow:auto; resize:both; min-width:150px; min-height:66px;
+    overflow:auto; resize:vertical; min-height:66px;
   }
   .tile:hover{ border-color:#3a4150; }
   .tile-top{ display:flex; align-items:flex-start; gap:8px; }
@@ -620,15 +620,17 @@ function resizeKeyFor(el) {
 function initResizable(el) {
   const key = resizeKeyFor(el);
   if (!key) return;
+  // 가로 폭은 그리드가 알아서 맞추게 두고, 세로 높이만 기억합니다.
+  // (가로까지 고정하면 그리드 칸 크기와 안 맞아서 옆에 빈 틈이 생길 수 있어요)
+  el.style.width = '';
   try {
     const saved = JSON.parse(localStorage.getItem(key) || 'null');
-    if (saved?.w) el.style.width = saved.w;
     if (saved?.h) el.style.height = saved.h;
   } catch {}
   if (resizeObserved.has(el)) return;
   resizeObserved.add(el);
   const ro = new ResizeObserver(() => {
-    localStorage.setItem(key, JSON.stringify({ w: el.style.width, h: el.style.height }));
+    localStorage.setItem(key, JSON.stringify({ h: el.style.height }));
   });
   ro.observe(el);
 }
