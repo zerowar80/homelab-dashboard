@@ -482,11 +482,11 @@ app.get('/api/proxmox/:id', async (req, res) => {
           uptime: n.uptime,
           guests: [
             ...qemu.map((v) => ({
-              id: v.vmid, name: v.name, type: 'qemu', status: v.status,
+              id: v.vmid, name: v.name, type: 'qemu', status: v.status, node: n.node,
               cpu: v.cpu, mem: v.mem, maxmem: v.maxmem,
             })),
             ...lxc.map((v) => ({
-              id: v.vmid, name: v.name, type: 'lxc', status: v.status,
+              id: v.vmid, name: v.name, type: 'lxc', status: v.status, node: n.node,
               cpu: v.cpu, mem: v.mem, maxmem: v.maxmem,
             })),
           ],
@@ -496,6 +496,24 @@ app.get('/api/proxmox/:id', async (req, res) => {
     res.json({ ok: true, name: server.name, nodes: nodesDetailed, host: server.host });
   } catch (err) {
     res.json({ ok: false, name: server.name, error: err.message, host: server.host });
+  }
+});
+
+// VM/LXC 전원 제어 (시작/종료/재시작). type은 qemu 또는 lxc.
+const ALLOWED_POWER_ACTIONS = new Set(['start', 'shutdown', 'stop', 'reboot']);
+
+app.post('/api/proxmox/:id/guest/:node/:type/:vmid/:action', async (req, res) => {
+  const server = findPve(req.params.id);
+  if (!server) return res.status(404).json({ ok: false, error: '서버를 찾을 수 없습니다' });
+  const { node, vmid, action } = req.params;
+  const type = req.params.type === 'lxc' ? 'lxc' : 'qemu';
+  if (!ALLOWED_POWER_ACTIONS.has(action)) return res.status(400).json({ ok: false, error: '지원하지 않는 동작입니다' });
+  try {
+    await pveRaw(server, 'post', `/nodes/${node}/${type}/${vmid}/status/${action}`);
+    broadcastRefresh();
+    res.json({ ok: true });
+  } catch (err) {
+    res.json({ ok: false, error: err.response?.data?.errors ? JSON.stringify(err.response.data.errors) : err.message });
   }
 });
 

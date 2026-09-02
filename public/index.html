@@ -244,6 +244,10 @@
     border-radius:6px; cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center;
   }
   .icon-btn:hover{ color:var(--text); border-color:#3a4150; }
+  .guest-actions{ display:flex; gap:4px; margin-left:4px; }
+  .guest-actions .icon-btn{ width:22px; height:22px; font-size:11px; }
+  .guest-actions .icon-btn:hover{ color:var(--text); border-color:var(--synology); }
+  .guest-actions .icon-btn[data-guest-action="shutdown"]:hover{ border-color:var(--bad); color:var(--bad); }
   .tile-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(180px, 1fr)); gap:8px; }
   .tile{
     background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:10px;
@@ -738,7 +742,7 @@ function pveMetricsHtml(nodes) {
   }).join('') + `</div>`;
 }
 
-function pveGuestsHtml(nodes) {
+function pveGuestsHtml(nodes, serverId) {
   let html = '';
   nodes.forEach((n) => {
     (n.guests || []).forEach((g) => {
@@ -746,13 +750,18 @@ function pveGuestsHtml(nodes) {
       const usage = g.status === 'running'
         ? `<span class="usage-badge">CPU ${fmtPct(g.cpu || 0)}</span><span class="usage-badge">MEM ${fmtBytes(g.mem)}</span>`
         : '';
+      const ctx = `data-server="${serverId}" data-node="${esc(n.node)}" data-type="${g.type}" data-vmid="${g.id}"`;
+      const actions = g.status === 'running'
+        ? `<button class="icon-btn" data-guest-action="reboot" ${ctx} title="재시작">⟳</button>
+           <button class="icon-btn" data-guest-action="shutdown" ${ctx} title="종료">■</button>`
+        : `<button class="icon-btn" data-guest-action="start" ${ctx} title="시작">▶</button>`;
       html += `
         <div class="row" data-toggle>
           <div class="row-left">
             <span class="badge ${g.type}">${g.type === 'qemu' ? 'VM' : 'LXC'}</span>
             <span class="name">${esc(g.name || ('#' + g.id))}</span>
           </div>
-          <div class="row-right">${usage}${pillFor(g.status)}</div>
+          <div class="row-right">${usage}${pillFor(g.status)}<span class="guest-actions">${actions}</span></div>
           <div class="detail">
             ID <code>${g.id}</code> · 노드 ${esc(n.node)} · CPU ${fmtPct(g.cpu || 0)} · 메모리 ${fmtBytes(g.mem)} / ${fmtBytes(g.maxmem)} (${fmtPct(guestMemPct)})
           </div>
@@ -811,7 +820,7 @@ async function loadPveZone(server) {
     return;
   }
   dot.className = 'dot ok';
-  if (vmBody) vmBody.innerHTML = pveGuestsHtml(main.nodes);
+  if (vmBody) vmBody.innerHTML = pveGuestsHtml(main.nodes, server.id);
 
   const [conn, block] = await Promise.all([
     api(`/api/proxmox/${server.id}/connections`),
@@ -1249,6 +1258,20 @@ async function refresh() {
 }
 
 document.addEventListener('click', async (e) => {
+  // VM/LXC 시작/종료/재시작
+  const guestActionBtn = e.target.closest('[data-guest-action]');
+  if (guestActionBtn) {
+    const action = guestActionBtn.dataset.guestAction;
+    const { server, node, type, vmid } = guestActionBtn.dataset;
+    const label = { start: '시작', shutdown: '종료', reboot: '재시작' }[action] || action;
+    if (action !== 'start' && !confirm(`정말 ${label}하시겠습니까?`)) return;
+    guestActionBtn.disabled = true;
+    const r = await api(`/api/proxmox/${server}/guest/${node}/${type}/${vmid}/${action}`, { method: 'POST' });
+    guestActionBtn.disabled = false;
+    if (!r.ok) alert(`${label} 실패: ` + (r.error || '알 수 없는 오류'));
+    return;
+  }
+
   // 서버 설정 버튼 (카드의 ⚙, 서버 관리 목록 항목)
   const editServerBtn = e.target.closest('[data-edit-server]');
   if (editServerBtn) {
