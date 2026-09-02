@@ -24,7 +24,13 @@ const DEFAULT_NOTIFICATIONS = {
   events: { serverDown: true, serverUp: true, tileDown: true, tileUp: true, loginFail: true },
 };
 
-let cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 }, notifications: { ...DEFAULT_NOTIFICATIONS } };
+const DEFAULT_SETTINGS = {
+  refreshInterval: 15,
+  title: '홈랩 대시보드',
+  subtitle: 'Proxmox VE · Synology DSM',
+};
+
+let cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { ...DEFAULT_SETTINGS }, notifications: { ...DEFAULT_NOTIFICATIONS } };
 
 function newId(prefix) {
   return prefix + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -40,7 +46,7 @@ function loadConfig() {
 
   if (!parsed) {
     // 파일이 없으면 최초 실행 - .env 값이 있으면 그걸로 시드
-    cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 }, notifications: { ...DEFAULT_NOTIFICATIONS } };
+    cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { ...DEFAULT_SETTINGS }, notifications: { ...DEFAULT_NOTIFICATIONS } };
     if (process.env.PROXMOX_HOST) {
       cfg.proxmoxServers.push({
         id: newId('pve'), name: 'Proxmox',
@@ -62,8 +68,8 @@ function loadConfig() {
     return;
   }
 
-  cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { refreshInterval: 15 }, notifications: { ...DEFAULT_NOTIFICATIONS }, ...parsed };
-  cfg.settings = { refreshInterval: 15, ...(parsed.settings || {}) };
+  cfg = { proxmoxServers: [], synologyServers: [], groups: [], users: [], accessLog: [], settings: { ...DEFAULT_SETTINGS }, notifications: { ...DEFAULT_NOTIFICATIONS }, ...parsed };
+  cfg.settings = { ...DEFAULT_SETTINGS, ...(parsed.settings || {}) };
   cfg.notifications = { ...DEFAULT_NOTIFICATIONS, ...(parsed.notifications || {}), events: { ...DEFAULT_NOTIFICATIONS.events, ...(parsed.notifications?.events || {}) } };
 
   // 구버전(단일 서버) 설정 마이그레이션
@@ -282,8 +288,10 @@ app.get('/api/settings', (req, res) => {
 });
 
 app.put('/api/settings', requireAuth, (req, res) => {
-  const { refreshInterval } = req.body || {};
+  const { refreshInterval, title, subtitle } = req.body || {};
   if (refreshInterval) cfg.settings.refreshInterval = Math.max(5, Math.min(600, Number(refreshInterval) || 15));
+  if (title !== undefined) cfg.settings.title = title.trim() || DEFAULT_SETTINGS.title;
+  if (subtitle !== undefined) cfg.settings.subtitle = subtitle.trim();
   saveConfig();
   res.json({ ok: true, settings: cfg.settings });
 });

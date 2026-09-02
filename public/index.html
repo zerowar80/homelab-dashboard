@@ -46,12 +46,12 @@
   button.refresh:hover{ background:#262b34; }
   button.refresh:active{ transform:translateY(1px); }
   .server-grid{
-    display:grid; grid-template-columns:repeat(auto-fit, minmax(360px, 1fr)); gap:14px;
+    column-count:3; column-gap:14px;
     padding:16px; max-width:1400px; margin:0 auto;
-    align-items:start;
   }
-  .zone{ max-width:640px; }
-  @media (max-width:900px){ .server-grid{ grid-template-columns:1fr; } .zone{ max-width:none; } }
+  .zone{ break-inside:avoid; margin-bottom:14px; display:inline-block; width:100%; }
+  @media (max-width:1100px){ .server-grid{ column-count:2; } }
+  @media (max-width:700px){ .server-grid{ column-count:1; } }
 
   .zone{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
   .zone-head{
@@ -324,8 +324,8 @@
 
 <header>
   <div>
-    <h1>홈랩 대시보드</h1>
-    <div class="sub">Proxmox VE · Synology DSM <span id="versionBadge" style="opacity:.6"></span></div>
+    <h1 id="pageTitle">홈랩 대시보드</h1>
+    <div class="sub"><span id="pageSubtitle">Proxmox VE · Synology DSM</span> <span id="versionBadge" style="opacity:.6"></span></div>
   </div>
   <div class="controls">
     <span class="updated" id="updated">불러오는 중…</span>
@@ -450,11 +450,19 @@
 
       <div class="settings-pane" data-pane="general" style="display:none">
         <div class="modal-section">
+          <h3>대시보드 제목</h3>
+          <label>제목</label>
+          <input type="text" id="titleInput" placeholder="홈랩 대시보드">
+          <label>부제목 <span class="hint">(선택, 비워도 됨)</span></label>
+          <input type="text" id="subtitleInput" placeholder="Proxmox VE · Synology DSM">
+          <button class="modal-save" id="titleSaveBtn" style="margin-top:12px;">저장</button>
+        </div>
+        <div class="modal-section">
           <h3>새로고침 주기</h3>
           <label>몇 초마다 자동으로 새로고침할지 <span class="hint">(5~600초)</span></label>
           <input type="number" id="refreshIntervalInput" min="5" max="600" step="5">
-          <div class="modal-msg" id="generalMsg"></div>
         </div>
+        <div class="modal-msg" id="generalMsg"></div>
       </div>
 
       <div class="settings-pane" data-pane="notify" style="display:none">
@@ -573,6 +581,19 @@ const fmtUptime = (s) => {
   if (!s) return '-';
   const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600);
   return d > 0 ? `${d}일 ${h}시간` : `${h}시간`;
+};
+// Synology의 up_time은 DSM 버전에 따라 초(숫자) 또는 "D:H:M:S" 문자열로 옵니다.
+const fmtSynUptime = (v) => {
+  if (!v && v !== 0) return '-';
+  if (typeof v === 'string' && v.includes(':')) {
+    const parts = v.split(':').map(Number);
+    if (parts.some(isNaN)) return v;
+    const h = parts.length === 4 ? parts[1] : parts[0];
+    const d = parts.length === 4 ? parts[0] : 0;
+    return d > 0 ? `${d}일 ${h}시간` : `${h}시간`;
+  }
+  const n = Number(v);
+  return isNaN(n) ? '-' : fmtUptime(n);
 };
 const levelClass = (pct) => pct > 0.85 ? 'bad' : pct > 0.65 ? 'warn' : '';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -821,7 +842,7 @@ async function loadSynZone(server) {
       <div class="metric"><div class="label">CPU</div><div class="value ${levelClass(cpuPct)}">${fmtPct(cpuPct)}</div></div>
       <div class="metric"><div class="label">메모리</div><div class="value ${levelClass(memPct)}">${fmtPct(memPct)}</div></div>
       <div class="metric"><div class="label">모델</div><div class="value" style="font-size:14px">${esc(info.model || '-')}</div></div>
-      <div class="metric"><div class="label">가동 시간</div><div class="value" style="font-size:14px">${info.up_time ? fmtUptime(info.up_time) : '-'}</div></div>
+      <div class="metric"><div class="label">가동 시간</div><div class="value" style="font-size:14px">${fmtSynUptime(info.up_time)}</div></div>
     </div>` +
     synStorageHtml(main.storage) +
     synDockerHtml(docker.items || []) +
@@ -1001,7 +1022,29 @@ async function loadGeneralSettings() {
   const data = await api('/api/settings');
   refreshIntervalSec = data.settings?.refreshInterval || 15;
   document.getElementById('refreshIntervalInput').value = refreshIntervalSec;
+  document.getElementById('titleInput').value = data.settings?.title || '';
+  document.getElementById('subtitleInput').value = data.settings?.subtitle || '';
+  applyTitleToPage(data.settings?.title, data.settings?.subtitle);
 }
+
+function applyTitleToPage(title, subtitle) {
+  document.getElementById('pageTitle').textContent = title || '홈랩 대시보드';
+  document.getElementById('pageSubtitle').textContent = subtitle || '';
+  document.title = title || '홈랩 대시보드';
+}
+
+document.getElementById('titleSaveBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('generalMsg');
+  const title = document.getElementById('titleInput').value.trim();
+  const subtitle = document.getElementById('subtitleInput').value.trim();
+  const r = await api('/api/settings', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ title, subtitle }) });
+  if (r.ok) {
+    applyTitleToPage(r.settings.title, r.settings.subtitle);
+    msg.textContent = '저장했습니다.'; msg.className = 'modal-msg';
+  } else {
+    msg.textContent = r.error || '저장 실패'; msg.className = 'modal-msg error';
+  }
+});
 
 document.getElementById('refreshIntervalInput').addEventListener('change', async (e) => {
   const msg = document.getElementById('generalMsg');
