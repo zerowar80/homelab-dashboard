@@ -340,6 +340,13 @@
 
 <div class="shortcuts">
   <div class="shortcuts-head">
+    <h2>가상머신 / 컨테이너</h2>
+  </div>
+  <div class="server-grid" id="vmContainer" style="padding:0;"></div>
+</div>
+
+<div class="shortcuts">
+  <div class="shortcuts-head">
     <h2>서비스 바로가기</h2>
     <button class="add-group-btn" id="addGroupBtn">+ 그룹 추가</button>
   </div>
@@ -730,6 +737,8 @@ function blocklistHtml(items, serverId, target) {
     <div class="blocked-list">${rows}</div>`;
 }
 
+let pveDataCache = {};
+
 async function loadPveZone(server) {
   const card = document.querySelector(`[data-pve-id="${server.id}"]`);
   if (!card) return;
@@ -740,9 +749,13 @@ async function loadPveZone(server) {
   if (!main.ok) {
     dot.className = 'dot bad';
     body.innerHTML = `<div class="error-box">연결 실패: ${esc(main.error)}</div>`;
+    delete pveDataCache[server.id];
+    renderVmSection();
     return;
   }
   dot.className = 'dot ok';
+  pveDataCache[server.id] = main;
+  renderVmSection();
 
   const [conn, block] = await Promise.all([
     api(`/api/proxmox/${server.id}/connections`),
@@ -751,10 +764,24 @@ async function loadPveZone(server) {
 
   body.innerHTML =
     pveMetricsHtml(main.nodes) +
-    `<div class="subhead">가상머신 / 컨테이너</div>` +
-    pveGuestsHtml(main.nodes) +
     connectionsHtml(conn.items || [], server.id) +
     blocklistHtml(block.items || [], server.id, 'pve');
+}
+
+function renderVmSection() {
+  const box = document.getElementById('vmContainer');
+  if (!box) return;
+  const cards = pveServers.map(s => {
+    const data = pveDataCache[s.id];
+    if (!data) return '';
+    return `
+      <section class="zone">
+        <div class="zone-head"><div class="name">${esc(s.name)}</div></div>
+        <div class="subhead">가상머신 / 컨테이너</div>
+        ${pveGuestsHtml(data.nodes)}
+      </section>`;
+  }).filter(Boolean).join('');
+  box.innerHTML = cards || `<div class="empty" style="padding:16px 0;">등록된 Proxmox 서버가 없거나 아직 불러오는 중입니다.</div>`;
 }
 
 /* ---------------- Synology 카드 ---------------- */
