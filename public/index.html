@@ -347,13 +347,6 @@
 
 <div class="shortcuts">
   <div class="shortcuts-head">
-    <h2>가상머신 / 컨테이너</h2>
-  </div>
-  <div class="server-grid" id="vmContainer" style="padding:0;"></div>
-</div>
-
-<div class="shortcuts">
-  <div class="shortcuts-head">
     <h2>서비스 바로가기</h2>
     <button class="add-group-btn" id="addGroupBtn">+ 그룹 추가</button>
   </div>
@@ -691,7 +684,8 @@ function renderServerGrid() {
   // (매번 통째로 다시 그리면 실시간 업데이트마다 화면이 깜빡여서 "새로고침 느낌"이 납니다)
   const signature = pveServers.map(s => 'p:' + s.id).join(',') + '|' + synServers.map(s => 's:' + s.id).join(',');
   if (signature !== lastGridSignature) {
-    grid.innerHTML = pveServers.map(s => pveCardShell(s)).join('') + synServers.map(s => synCardShell(s)).join('');
+    // Proxmox 모니터링 카드 바로 옆에 그 서버의 VM/컨테이너 카드를 붙여서 배치합니다.
+    grid.innerHTML = pveServers.map(s => pveCardShell(s) + vmCardShell(s)).join('') + synServers.map(s => synCardShell(s)).join('');
     lastGridSignature = signature;
   }
   pveServers.forEach(loadPveZone);
@@ -715,6 +709,19 @@ function pveCardShell(server) {
         </div>
       </div>
       <div data-role="body"><div class="empty">불러오는 중…</div></div>
+    </section>`;
+}
+
+function vmCardShell(server) {
+  return `
+    <section class="zone" data-vm-id="${server.id}">
+      <div class="zone-head">
+        <div class="name">
+          <span class="drag-handle" draggable="true" data-pve-drag="${server.id}" title="드래그해서 순서 바꾸기">⠿</span>
+          ${esc(server.name)} · 가상머신/컨테이너
+        </div>
+      </div>
+      <div data-role="vmbody"><div class="empty">불러오는 중…</div></div>
     </section>`;
 }
 
@@ -786,25 +793,23 @@ function blocklistHtml(items, serverId, target) {
     <div class="blocked-list">${rows}</div>`;
 }
 
-let pveDataCache = {};
-
 async function loadPveZone(server) {
   const card = document.querySelector(`[data-pve-id="${server.id}"]`);
+  const vmCard = document.querySelector(`[data-vm-id="${server.id}"]`);
   if (!card) return;
   const dot = card.querySelector('[data-role="dot"]');
   const body = card.querySelector('[data-role="body"]');
+  const vmBody = vmCard ? vmCard.querySelector('[data-role="vmbody"]') : null;
 
   const main = await api(`/api/proxmox/${server.id}`);
   if (!main.ok) {
     dot.className = 'dot bad';
     body.innerHTML = `<div class="error-box">연결 실패: ${esc(main.error)}</div>`;
-    delete pveDataCache[server.id];
-    renderVmSection();
+    if (vmBody) vmBody.innerHTML = `<div class="error-box">연결 실패: ${esc(main.error)}</div>`;
     return;
   }
   dot.className = 'dot ok';
-  pveDataCache[server.id] = main;
-  renderVmSection();
+  if (vmBody) vmBody.innerHTML = pveGuestsHtml(main.nodes);
 
   const [conn, block] = await Promise.all([
     api(`/api/proxmox/${server.id}/connections`),
@@ -815,28 +820,6 @@ async function loadPveZone(server) {
     pveMetricsHtml(main.nodes) +
     connectionsHtml(conn.items || [], server.id) +
     blocklistHtml(block.items || [], server.id, 'pve');
-}
-
-function renderVmSection() {
-  const box = document.getElementById('vmContainer');
-  if (!box) return;
-  const cards = pveServers.map(s => {
-    const data = pveDataCache[s.id];
-    if (!data) return '';
-    return `
-      <section class="zone" data-vm-id="${s.id}">
-        <div class="zone-head">
-          <div class="name">
-            <span class="drag-handle" draggable="true" data-pve-drag="${s.id}" title="드래그해서 순서 바꾸기">⠿</span>
-            ${esc(s.name)}
-          </div>
-        </div>
-        <div class="subhead">가상머신 / 컨테이너</div>
-        ${pveGuestsHtml(data.nodes)}
-      </section>`;
-  }).filter(Boolean).join('');
-  box.innerHTML = cards || `<div class="empty" style="padding:16px 0;">등록된 Proxmox 서버가 없거나 아직 불러오는 중입니다.</div>`;
-  initAllResizables();
 }
 
 /* ---------------- Synology 카드 ---------------- */
@@ -1674,7 +1657,6 @@ document.addEventListener('drop', async (e) => {
     const [moved] = pveServers.splice(from, 1);
     pveServers.splice(to, 0, moved);
     renderServerGrid();
-    renderVmSection();
     await api('/api/proxmox/servers/reorder', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ order: pveServers.map(s => s.id) }) });
     return;
   }
